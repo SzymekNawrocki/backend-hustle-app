@@ -17,6 +17,7 @@ class JobApplicationResponse(JobApplicationBase):
     id: int
     ai_keywords: Optional[List[str]] = None
     match_score: Optional[int] = None
+    ai_analysis: Optional[dict] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

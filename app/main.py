@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app import models
-from app.routers import career, finance
+from app.routers import career, finance, user
 
 # Create database tables (usually handled by Alembic, but good for dev)
 Base.metadata.create_all(bind=engine)
@@ -25,6 +25,7 @@ app.add_middleware(
 # Include Routers
 app.include_router(career.router)
 app.include_router(finance.router)
+app.include_router(user.router)
 
 @app.get("/")
 def read_root():

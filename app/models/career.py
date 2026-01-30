@@ -20,4 +20,5 @@ class JobApplication(Base):
     description_raw = Column(Text, nullable=True)
     ai_keywords = Column(JSON, nullable=True)
     match_score = Column(Integer, nullable=True)
+    ai_analysis = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
