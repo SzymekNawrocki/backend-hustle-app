@@ -1,29 +1,14 @@
-import os
 from fastapi import FastAPI, Depends
+from sqlalchemy.orm import Session
+from typing import List
+from app import models, schemas, crud, database
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, Integer, String, Float
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
-from dotenv import load_dotenv
 
-load_dotenv()
+models.Base.metadata.create_all(bind=database.engine)
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+app = FastAPI(title="Hustle API Pro")
 
-class HustleItem(Base):
-    __tablename__ = "hustle_items"
-    id = Column(Integer, primary_key=True, index=True)
-    category = Column(String)
-    title = Column(String)
-    value = Column(Float)
-
-Base.metadata.create_all(bind=engine)
-
-app = FastAPI()
-
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,27 +16,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+@app.post("/items", response_model=schemas.HustleItemResponse)
+def create_item(item: schemas.HustleItemCreate, db: Session = Depends(database.get_db)):
+    return crud.create_item(db=db, item=item)
 
+@app.get("/items", response_model=List[schemas.HustleItemResponse])
+def read_items(db: Session = Depends(database.get_db)):
+    return crud.get_items(db=db)
 
-@app.get("/status")
-def get_status():
-    return {"status": "Hustle API Online", "message": "Działa kurwa!"}
-
-@app.post("/items")
-def create_item(title: str, category: str, value: float, db: Session = Depends(get_db)):
-    new_item = HustleItem(title=title, category=category, value=value)
-    db.add(new_item)
-    db.commit()
-    db.refresh(new_item)
-    return {"status": "Zapisano w bazie!", "data": new_item}
-
-@app.get("/items")
-def get_items(db: Session = Depends(get_db)):
-    items = db.query(models.HustleItem).all()
-    return items
+@app.get("/")
+def root():
+    return {"message": "API po refaktoryzacji działa!"}
