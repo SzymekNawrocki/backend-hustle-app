@@ -3,7 +3,22 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 from app.models.career import JobStatus, InterviewType
 
-# Interview Schemas
+# --- NOWE: Schematy Profilu ---
+class UserProfileBase(BaseModel):
+    full_name: Optional[str] = None
+    cv_text: Optional[str] = None
+    job_title: Optional[str] = None
+
+class UserProfileUpdate(UserProfileBase):
+    pass
+
+class UserProfileResponse(UserProfileBase):
+    id: int
+    user_id: int
+    
+    model_config = ConfigDict(from_attributes=True)
+
+# --- Interview Schemas ---
 class InterviewBase(BaseModel):
     date: datetime
     type: InterviewType = InterviewType.TECH
@@ -18,7 +33,7 @@ class InterviewResponse(InterviewBase):
     
     model_config = ConfigDict(from_attributes=True)
 
-# Job Application Schemas
+# --- Job Application Schemas ---
 class JobApplicationBase(BaseModel):
     company: str
     position: str
@@ -37,7 +52,7 @@ class JobApplicationResponse(JobApplicationBase):
     
     model_config = ConfigDict(from_attributes=True)
 
-# Analysis Schemas
+# --- Analysis Schemas ---
 class JobDescriptionRequest(BaseModel):
     description: str
 
