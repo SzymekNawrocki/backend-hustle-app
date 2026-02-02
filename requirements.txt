@@ -1,9 +1,22 @@
+# Web Framework & Server
 fastapi
-uvicorn
-sqlalchemy
-psycopg2-binary
+uvicorn[standard]
+
+# Database (Async)
+sqlalchemy>=2.0.0
+asyncpg            # Asynchroniczny driver dla Postgresa
+alembic            # Migracje
+
+# Security
+python-jose[cryptography]
+passlib[bcrypt]
+
+# Configuration & Validation
 python-dotenv
 pydantic-settings
-alembic
-groq
 pydantic[email]
+
+# AI & Tools
+groq
+langchain-groq     # Wyższy poziom abstrakcji dla AI
+httpx              # Asynchroniczny klient HTTP (do pobierania kursów walut)

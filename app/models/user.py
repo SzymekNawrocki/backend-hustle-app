@@ -1,12 +1,19 @@
-from sqlalchemy import Column, Integer, String, Text, JSON
-from app.database import Base
+from typing import List
+from sqlalchemy import String, Boolean, Integer
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from app.db.base_class import Base
 
-class UserProfile(Base):
-    __tablename__ = "user_profiles"
+class User(Base):
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
+    full_name: Mapped[str] = mapped_column(String, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    id = Column(Integer, primary_key=True, index=True)
-    full_name = Column(String, nullable=False)
-    job_title = Column(String, nullable=True)
-    bio = Column(Text, nullable=True)
-    experience_years = Column(Integer, default=0)
-    skills = Column(JSON, nullable=True)  # List of objects: [{"name": "Python", "level": 8}]
+    goals: Mapped[List["Goal"]] = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
+    tasks: Mapped[List["Task"]] = relationship("Task", back_populates="user", cascade="all, delete-orphan")
+    habits: Mapped[List["Habit"]] = relationship("Habit", back_populates="user", cascade="all, delete-orphan")
+    applications: Mapped[List["JobApplication"]] = relationship("JobApplication", back_populates="user", cascade="all, delete-orphan")
+    assets: Mapped[List["Asset"]] = relationship("Asset", back_populates="user", cascade="all, delete-orphan")
+    profile: Mapped[Optional["UserProfile"]] = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    meals: Mapped[List["MealLog"]] = relationship("MealLog", back_populates="user", cascade="all, delete-orphan")

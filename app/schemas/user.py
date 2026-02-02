@@ -1,24 +1,26 @@
-from pydantic import BaseModel, ConfigDict
-from typing import List, Optional, Any
+from pydantic import BaseModel, EmailStr, ConfigDict
+from typing import Optional
 
-class SkillSchema(BaseModel):
-    name: str
-    level: int  # 1-10
-
-class UserProfileBase(BaseModel):
-    full_name: str
-    job_title: Optional[str] = None
-    bio: Optional[str] = None
-    experience_years: int = 0
-    skills: List[SkillSchema] = []
-
-class UserProfileUpdate(BaseModel):
+class UserBase(BaseModel):
+    email: Optional[EmailStr] = None
+    is_active: Optional[bool] = True
     full_name: Optional[str] = None
-    job_title: Optional[str] = None
-    bio: Optional[str] = None
-    experience_years: Optional[int] = None
-    skills: Optional[List[SkillSchema]] = None
 
-class UserProfileResponse(UserProfileBase):
+class UserCreate(UserBase):
+    email: EmailStr
+    password: str
+
+class UserUpdate(UserBase):
+    password: Optional[str] = None
+
+class UserResponse(UserBase):
     id: int
+    
     model_config = ConfigDict(from_attributes=True)
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenPayload(BaseModel):
+    sub: Optional[int] = None

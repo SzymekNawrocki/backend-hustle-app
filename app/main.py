@@ -1,16 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import engine, Base
-from app import models
-from app.routers import career, finance, user
-
-# Create database tables (usually handled by Alembic, but good for dev)
-Base.metadata.create_all(bind=engine)
+from app.api.v1.api import api_router
+from app.core.config import settings
 
 app = FastAPI(
-    title="Hustle App API",
-    description="Backend for the Hustle App - Career & AI Support module included.",
-    version="1.0.0"
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
 # CORS Configuration
@@ -23,10 +19,8 @@ app.add_middleware(
 )
 
 # Include Routers
-app.include_router(career.router)
-app.include_router(finance.router)
-app.include_router(user.router)
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def read_root():
-    return {"status": "success", "message": "Hustle App API is running!"}
+    return {"status": "success", "message": f"{settings.PROJECT_NAME} API is running!"}
