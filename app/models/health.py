@@ -1,3 +1,4 @@
+from typing import Optional
 from datetime import datetime
 from sqlalchemy import String, Integer, ForeignKey, DateTime, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -14,4 +15,4 @@ class MealLog(Base):
     
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
     user: Mapped["User"] = relationship("User", back_populates="meals")
-from typing import Optional
+
