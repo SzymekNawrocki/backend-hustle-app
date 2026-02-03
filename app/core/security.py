@@ -7,34 +7,15 @@ from app.core.config import settings
 import hashlib
 import base64
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Using PBKDF2-SHA256 as primary to avoid Bcrypt's 72-byte limit.
+# Bcrypt is kept for compatibility with any existing hashes.
+pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    print(f"DEBUG: Verifying password (plain length: {len(plain_password)})")
-    # SHA256 pre-hashing
-    pw_hash = hashlib.sha256(plain_password.encode("utf-8")).digest()
-    pw_b64 = base64.b64encode(pw_hash).decode("utf-8")
-    print(f"DEBUG: Pre-hashed length: {len(pw_b64)}")
-    return pwd_context.verify(pw_b64, hashed_password)
+    return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    print(f"DEBUG: Hashing password (length: {len(password)})")
-    try:
-        # SHA256 pre-hashing
-        pw_hash = hashlib.sha256(password.encode("utf-8")).digest()
-        pw_b64 = base64.b64encode(pw_hash).decode("utf-8")
-        print(f"DEBUG: Pre-hashed length: {len(pw_b64)}")
-        
-        # Final hash with logout
-        result = pwd_context.hash(pw_b64)
-        print("DEBUG: Hashing successful")
-        return result
-    except Exception as e:
-        print(f"DEBUG ERROR: {str(e)}")
-        # Ultimate fallback: if even 44 chars is "too long", try an even shorter hash
-        # This shouldn't happen but we need to see if this code is even running
-        short_hash = hashlib.md5(password.encode("utf-8")).hexdigest()
-        return pwd_context.hash(short_hash)
+    return pwd_context.hash(password)
 
 def create_access_token(subject: Union[str, Any], expires_delta: timedelta = None) -> str:
     if expires_delta:
