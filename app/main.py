@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from app.db.base import Base
 from app.api.v1.api import api_router
 from app.core.config import settings
 
@@ -9,7 +11,21 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
+# Global Exception Handler for debugging
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": f"Internal Server Error: {str(exc)}",
+            "type": str(type(exc).__name__),
+            "path": request.url.path
+        },
+        headers={"Access-Control-Allow-Origin": "*"} # Force CORS for error responses
+    )
+
 # CORS Configuration
+# specific origins are required when allow_credentials=True
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
