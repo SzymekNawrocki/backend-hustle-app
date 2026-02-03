@@ -24,3 +24,16 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 @app.get("/")
 def read_root():
     return {"status": "success", "message": f"{settings.PROJECT_NAME} API is running!"}
+
+@app.get("/health-check")
+async def health_check():
+    from sqlalchemy import select
+    from app.db.session import SessionLocal
+    from app.models.user import User
+    
+    try:
+        async with SessionLocal() as db:
+            await db.execute(select(User).limit(1))
+        return {"status": "ok", "database": "connected"}
+    except Exception as e:
+        return {"status": "error", "database": str(e)}
