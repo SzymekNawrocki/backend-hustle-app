@@ -10,7 +10,12 @@ class Settings(BaseSettings):
 
     @property
     def ASYNC_DATABASE_URL(self) -> str:
-        return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+        url = self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+        # asyncpg doesn't support sslmode or channel_binding in the DSN string
+        if "?" in url:
+            base_url = url.split("?")[0]
+            return base_url
+        return url
 
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
