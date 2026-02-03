@@ -19,7 +19,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={
             "detail": f"Internal Server Error: {str(exc)}",
             "type": str(type(exc).__name__),
-            "path": request.url.path
+            "path": request.url.path,
+            "method": request.method
         },
         headers={"Access-Control-Allow-Origin": "*"} # Force CORS for error responses
     )

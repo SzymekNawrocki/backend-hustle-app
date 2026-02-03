@@ -42,7 +42,7 @@ async def register(
 @router.post("/login", response_model=Token)
 async def login(
     db: AsyncSession = Depends(deps.get_db),
-    form_data: OAuth2PasswordRequestForm = Depends() # WYMAGA python-multipart
+    form_data: OAuth2PasswordRequestForm = Depends() # OAuth2 compatibility
 ) -> Any:
     # Szukanie użytkownika po emailu (form_data.username)
     result = await db.execute(select(User).where(User.email == form_data.username))
