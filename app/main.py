@@ -47,9 +47,10 @@ async def health_check():
     from app.db.session import AsyncSessionLocal
     from app.models.user import User
     
+    # Deployment verification tag: V4_SHA256
     try:
         async with AsyncSessionLocal() as db:
             await db.execute(select(User).limit(1))
-        return {"status": "ok", "database": "connected"}
+        return {"status": "ok", "database": "connected", "version": "V4_SHA256_DEBUG"}
     except Exception as e:
-        return {"status": "error", "database": str(e)}
+        return {"status": "error", "database": str(e), "version": "V4_SHA256_DEBUG"}
