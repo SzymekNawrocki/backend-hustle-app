@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     GROQ_API_KEY: str
+    BACKEND_CORS_ORIGINS: list[str] = [
+        "https://hustle-app-theta.vercel.app",
+        "http://localhost:3000",
+    ]
 
     model_config = SettingsConfigDict(
         env_file=".env", 
