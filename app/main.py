@@ -28,11 +28,11 @@ def read_root():
 @app.get("/health-check")
 async def health_check():
     from sqlalchemy import select
-    from app.db.session import SessionLocal
+    from app.db.session import AsyncSessionLocal
     from app.models.user import User
     
     try:
-        async with SessionLocal() as db:
+        async with AsyncSessionLocal() as db:
             await db.execute(select(User).limit(1))
         return {"status": "ok", "database": "connected"}
     except Exception as e:
