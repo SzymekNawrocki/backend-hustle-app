@@ -71,6 +71,7 @@ class GoalResponse(GoalBase):
     id: int
     user_id: int
     milestones: List[MilestoneResponse] = []
+    tasks: List[TaskResponse] = []
     
     @computed_field
     @property

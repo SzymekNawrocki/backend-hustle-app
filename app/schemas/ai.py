@@ -14,4 +14,6 @@ class JobAnalysisAIResponse(BaseModel):
 
 class OKRAIResponse(BaseModel):
     title: str
+    description: str
     milestones: List[str]
+    tasks: List[str]

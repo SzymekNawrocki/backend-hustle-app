@@ -6,7 +6,7 @@ from app.core.config import settings
 class AIService:
     def __init__(self):
         self.client = AsyncGroq(api_key=settings.GROQ_API_KEY)
-        self.model = "llama-3.3-70b-versatile"
+        self.model = "llama3-70b-8192"
 
     async def _get_json_response(self, prompt: str, system_prompt: str) -> Dict[str, Any]:
         try:
@@ -37,7 +37,14 @@ class AIService:
         return await self._get_json_response(prompt, system_prompt)
 
     async def generate_okr(self, idea: str) -> Dict[str, Any]:
-        system_prompt = "You are a productivity expert. Generate a title and 3-4 SMART milestones for a goal idea."
+        system_prompt = (
+            "You are a productivity expert. Generate a high-level goal based on the user's idea in POLISH. "
+            "Return ONLY a valid JSON object with the following keys: "
+            "'title' (string), "
+            "'description' (string, max 2 sentences), "
+            "'milestones' (list of 3-4 strings), "
+            "'tasks' (list of 5-8 actionable small steps)."
+        )
         prompt = f"Goal Idea: {idea}"
         return await self._get_json_response(prompt, system_prompt)
 

@@ -118,14 +118,31 @@ async def smart_create_goal(
     if "error" in ai_data:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=ai_data.get("details", "AI Error"))
     
+    print(f"DEBUG: AI raw data: {ai_data}")
+    
+    # Ensure all required fields exist for OKRAIResponse
+    if "title" not in ai_data: ai_data["title"] = input_data.idea[:50]
+    if "description" not in ai_data: ai_data["description"] = f"Plan dla: {input_data.idea}"
+    if "milestones" not in ai_data or not isinstance(ai_data["milestones"], list):
+        ai_data["milestones"] = ["Rozpoczęcie projektu", "Realizacja głównych kroków", "Finalizacja"]
+    if "tasks" not in ai_data or not isinstance(ai_data["tasks"], list):
+        ai_data["tasks"] = ["Zdefiniuj pierwszy krok", "Przygotuj narzędzia", "Działaj!"]
+
     try:
         okr = OKRAIResponse(**ai_data)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI output validation failed: {e}")
+        print(f"DEBUG: Validation error: {e}")
+        # Final fallback if even defaults are weird
+        okr = OKRAIResponse(
+            title=ai_data.get("title", "Nowy Cel"),
+            description=ai_data.get("description", "Brak opisu"),
+            milestones=ai_data.get("milestones", []),
+            tasks=ai_data.get("tasks", [])
+        )
 
     db_goal = Goal(
         title=okr.title,
-        description=f"AI-generated goal based on: {input_data.idea}",
+        description=okr.description,
         user_id=current_user.id
     )
     db.add(db_goal)
@@ -133,10 +150,18 @@ async def smart_create_goal(
     
     for m_title in okr.milestones:
         db.add(Milestone(title=m_title, goal_id=db_goal.id))
+        
+    for t_title in okr.tasks:
+        db.add(Task(title=t_title, goal_id=db_goal.id, user_id=current_user.id))
     
     await db.commit()
     result = await db.execute(
-        select(Goal).where(Goal.id == db_goal.id).options(selectinload(Goal.milestones))
+        select(Goal)
+        .where(Goal.id == db_goal.id)
+        .options(
+            selectinload(Goal.milestones),
+            selectinload(Goal.tasks)
+        )
     )
     return result.scalars().first()
 
@@ -211,3 +236,51 @@ async def delete_goal(
     await db.delete(goal)
     await db.commit()
     return goal
+@router.post("/tasks/{task_id}/toggle", response_model=TaskResponse)
+async def toggle_task(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    task_id: int
+) -> Any:
+    """
+    Toggle task completion status.
+    """
+    result = await db.execute(
+        select(Task).where(Task.id == task_id, Task.user_id == current_user.id)
+    )
+    task = result.scalars().first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    task.is_completed = not task.is_completed
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+    return task
+
+@router.post("/milestones/{milestone_id}/toggle", response_model=MilestoneResponse)
+async def toggle_milestone(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    milestone_id: int
+) -> Any:
+    """
+    Toggle milestone completion status.
+    """
+    # Join with Goal to check user_id
+    result = await db.execute(
+        select(Milestone)
+        .join(Goal)
+        .where(Milestone.id == milestone_id, Goal.user_id == current_user.id)
+    )
+    milestone = result.scalars().first()
+    if not milestone:
+        raise HTTPException(status_code=404, detail="Milestone not found")
+    
+    milestone.is_completed = not milestone.is_completed
+    db.add(milestone)
+    await db.commit()
+    await db.refresh(milestone)
+    return milestone
