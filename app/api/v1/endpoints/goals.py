@@ -10,7 +10,7 @@ from app.models.user import User
 from app.models.goal import Goal, Milestone, Task, Habit
 from app.schemas.goal import (
     GoalCreate, GoalResponse, DashboardToday, SmartCreateInput,
-    TaskResponse, HabitResponse, MilestoneCreate, GoalUpdate, GoalBase
+    TaskResponse, HabitResponse, MilestoneCreate, MilestoneResponse, GoalUpdate, GoalBase
 )
 from app.schemas.ai import OKRAIResponse
 from app.services.ai_service import ai_service
