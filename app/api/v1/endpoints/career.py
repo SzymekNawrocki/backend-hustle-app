@@ -21,14 +21,19 @@ router = APIRouter()
 
 @router.get("/profile", response_model=UserProfileResponse)
 async def get_profile(
+    db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ) -> Any:
     """
     Get current user's career profile.
     """
-    if not current_user.profile:
+    result = await db.execute(select(UserProfile).where(UserProfile.user_id == current_user.id))
+    profile = result.scalars().first()
+    
+    if not profile:
         return UserProfile(user_id=current_user.id)
-    return current_user.profile
+    return profile
+
 
 @router.put("/profile", response_model=UserProfileResponse)
 async def update_profile(
@@ -40,8 +45,10 @@ async def update_profile(
     """
     Update or create career profile/CV.
     """
-    if current_user.profile:
-        db_obj = current_user.profile
+    result = await db.execute(select(UserProfile).where(UserProfile.user_id == current_user.id))
+    db_obj = result.scalars().first()
+
+    if db_obj:
         update_data = profile_in.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_obj, field, value)
@@ -52,6 +59,8 @@ async def update_profile(
     await db.commit()
     await db.refresh(db_obj)
     return db_obj
+
+
 
 @router.post("/applications", response_model=JobApplicationResponse)
 async def create_application(
@@ -93,11 +102,11 @@ async def analyze_job(
     Perform deep AI analysis of a job description against the user's CV.
     """
     # Fetch profile if not already loaded
-    if not current_user.profile:
-        result = await db.execute(select(UserProfile).where(UserProfile.user_id == current_user.id))
-        current_user.profile = result.scalars().first()
+    result = await db.execute(select(UserProfile).where(UserProfile.user_id == current_user.id))
+    profile = result.scalars().first()
     
-    cv_text = current_user.profile.cv_text if current_user.profile else ""
+    cv_text = profile.cv_text if profile else ""
+
     if not cv_text:
         raise HTTPException(
             status_code=400, 
