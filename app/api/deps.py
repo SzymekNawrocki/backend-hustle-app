@@ -28,13 +28,15 @@ async def get_current_user(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
         token_data = TokenPayload(**payload)
-    except (JWTError, ValueError):
+    except (JWTError, ValueError) as e:
+        print(f"JWT Validation Error: {e}")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
         )
     
     result = await db.execute(select(User).where(User.id == int(token_data.sub)))
+
     user = result.scalars().first()
     
     if not user:

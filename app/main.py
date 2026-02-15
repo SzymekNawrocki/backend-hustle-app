@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.base import Base
@@ -11,9 +11,29 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
+# Custom middleware to log origin for debugging
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    origin = request.headers.get("origin")
+    if origin:
+        print(f"DEBUG: origin={origin} path={request.url.path}")
+    response = await call_next(request)
+    return response
+
+# Handle Faraday/CORS/Auth errors specifically
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    print(f"DEBUG: HTTPException: status={exc.status_code} detail={exc.detail}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers={"Access-Control-Allow-Origin": "*"} # Ensure preflight/errors always have CORS
+    )
+
 # Global Exception Handler for debugging
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    print(f"DEBUG: Global Exception: {str(exc)}")
     return JSONResponse(
         status_code=500,
         content={
@@ -24,6 +44,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         },
         headers={"Access-Control-Allow-Origin": "*"} # Force CORS for error responses
     )
+
 
 # CORS Configuration
 # specific origins are required when allow_credentials=True
@@ -48,7 +69,6 @@ async def health_check():
     from app.db.session import AsyncSessionLocal
     from app.models.user import User
     
-    # Deployment verification tag: V4_SHA256
     try:
         async with AsyncSessionLocal() as db:
             await db.execute(select(User).limit(1))
