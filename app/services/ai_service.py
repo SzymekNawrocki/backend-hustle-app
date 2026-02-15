@@ -6,7 +6,7 @@ from app.core.config import settings
 class AIService:
     def __init__(self):
         self.client = AsyncGroq(api_key=settings.GROQ_API_KEY)
-        self.model = "llama3-70b-8192"
+        self.model = "llama-3.3-70b-versatile"
 
     async def _get_json_response(self, prompt: str, system_prompt: str) -> Dict[str, Any]:
         try:
@@ -25,7 +25,9 @@ class AIService:
             return {"error": "AI service temporarily unavailable", "details": str(e)}
         except Exception as e:
             print(f"Unexpected AI Error: {e}")
-            return {"error": "Critical analysis failure"}
+            return {"error": "Critical analysis failure", "details": str(e)}
+
+
 
     async def parse_meal(self, text: str) -> Dict[str, Any]:
         system_prompt = "You are a nutritional expert. Extract calories (int), protein (float), carbs (float), and fat (float) from the meal description."
