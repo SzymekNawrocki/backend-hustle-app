@@ -69,9 +69,15 @@ async def read_goals(
         .where(Goal.user_id == current_user.id)
         .offset(skip)
         .limit(limit)
-        .options(selectinload(Goal.milestones))
+        .options(
+            selectinload(Goal.milestones),
+            selectinload(Goal.tasks)
+        )
     )
-    return result.scalars().all()
+    goals = result.scalars().all()
+    print(f"DEBUG: read_goals for user {current_user.id} found {len(goals)} goals")
+    return goals
+
 
 @router.get("/dashboard/today", response_model=DashboardToday)
 async def get_dashboard_today(
@@ -155,6 +161,8 @@ async def smart_create_goal(
         db.add(Task(title=t_title, goal_id=db_goal.id, user_id=current_user.id))
     
     await db.commit()
+    print(f"DEBUG: Successfully created smart goal {db_goal.id} for user {current_user.id}")
+
     result = await db.execute(
         select(Goal)
         .where(Goal.id == db_goal.id)
@@ -178,8 +186,12 @@ async def read_goal(
     result = await db.execute(
         select(Goal)
         .where(Goal.id == goal_id, Goal.user_id == current_user.id)
-        .options(selectinload(Goal.milestones))
+        .options(
+            selectinload(Goal.milestones),
+            selectinload(Goal.tasks)
+        )
     )
+
     goal = result.scalars().first()
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
