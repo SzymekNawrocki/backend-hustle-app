@@ -19,7 +19,7 @@ async def create_offer(
     current_user: User = Depends(deps.get_current_user),
     offer_in: JobOfferCreate,
 ) -> Any:
-    db_obj = JobOffer(**offer_in.model_dump(), user_id=current_user.id)
+    db_obj = JobOffer(**offer_in.model_dump(mode="json"), user_id=current_user.id)
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)

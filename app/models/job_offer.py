@@ -18,7 +18,12 @@ class JobOffer(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     title: Mapped[str] = mapped_column(String, nullable=False, index=True)
     status: Mapped[OfferStatus] = mapped_column(
-        ENUM(OfferStatus, name="offerstatus", create_type=False),
+        ENUM(
+            OfferStatus,
+            name="offerstatus",
+            create_type=False,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
         nullable=False,
     )
     url: Mapped[str] = mapped_column(String, nullable=False)
