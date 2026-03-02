@@ -45,11 +45,61 @@ async def create_transaction(
     if not result.scalars().first():
         raise HTTPException(status_code=404, detail="Asset not found")
         
-    db_obj = Transaction(**tx_in.model_dump())
+    tx_data = tx_in.model_dump()
+    if tx_data.get("timestamp") and hasattr(tx_data["timestamp"], "tzinfo") and tx_data["timestamp"].tzinfo is not None:
+        tx_data["timestamp"] = tx_data["timestamp"].replace(tzinfo=None)
+        
+    db_obj = Transaction(**tx_data)
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
     return db_obj
+
+
+@router.delete("/assets/{asset_id}", response_model=AssetResponse)
+async def delete_asset(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    asset_id: int
+) -> Any:
+    result = await db.execute(
+        select(Asset).where(
+            Asset.id == asset_id,
+            Asset.user_id == current_user.id
+        )
+    )
+    asset = result.scalars().first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    await db.delete(asset)
+    await db.commit()
+    return asset
+
+
+@router.delete("/transactions/{transaction_id}", response_model=TransactionResponse)
+async def delete_transaction(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    transaction_id: int
+) -> Any:
+    result = await db.execute(
+        select(Transaction)
+        .join(Asset)
+        .where(
+            Transaction.id == transaction_id,
+            Asset.user_id == current_user.id
+        )
+    )
+    transaction = result.scalars().first()
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    await db.delete(transaction)
+    await db.commit()
+    return transaction
 
 @router.get("/portfolio", response_model=List[AssetPortfolioResponse])
 async def get_portfolio(

@@ -4,6 +4,7 @@ from typing import List, Optional
 from sqlalchemy import String, Boolean, Integer, ForeignKey, Date, DateTime, Enum, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base_class import Base
+from app.db.types import NaiveDateTime
 
 class GoalCategory(str, enum.Enum):
     CAREER = "CAREER"
@@ -45,7 +46,7 @@ class Task(Base):
     title: Mapped[str] = mapped_column(String, index=True, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
-    due_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    due_date: Mapped[Optional[datetime]] = mapped_column(NaiveDateTime, nullable=True)
     
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
     user: Mapped["User"] = relationship("User", back_populates="tasks")

@@ -4,6 +4,7 @@ from typing import List, Optional
 from sqlalchemy import String, Integer, ForeignKey, DateTime, Enum, Float, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base_class import Base
+from app.db.types import NaiveDateTime
 
 class AssetType(str, enum.Enum):
     CRYPTO = "CRYPTO"
@@ -33,7 +34,7 @@ class Transaction(Base):
     amount: Mapped[float] = mapped_column(Float, nullable=False)
     price_per_unit: Mapped[float] = mapped_column(Float, nullable=False)
     fee: Mapped[float] = mapped_column(Float, default=0.0)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    timestamp: Mapped[datetime] = mapped_column(NaiveDateTime, default=datetime.utcnow)
     
     asset_id: Mapped[int] = mapped_column(Integer, ForeignKey("asset.id"), nullable=False)
     asset: Mapped["Asset"] = relationship("Asset", back_populates="transactions")

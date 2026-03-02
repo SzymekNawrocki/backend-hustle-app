@@ -37,22 +37,24 @@ async def create_goal(
     )
     db.add(db_goal)
     await db.flush() # Get id
+    obj_id = db_goal.id
     
     if goal_in.milestones:
         for milestone_in in goal_in.milestones:
             db_milestone = Milestone(
                 title=milestone_in.title,
                 is_completed=milestone_in.is_completed,
-                goal_id=db_goal.id
+                goal_id=obj_id
             )
             db.add(db_milestone)
     
     await db.commit()
-    # Reload with milestones
+    # Reload with milestones using the local ID
     result = await db.execute(
-        select(Goal).where(Goal.id == db_goal.id).options(selectinload(Goal.milestones))
+        select(Goal).where(Goal.id == obj_id).options(selectinload(Goal.milestones))
     )
-    return result.scalars().first()
+    db_goal_final = result.scalars().first()
+    return GoalResponse.model_validate(db_goal_final).model_dump()
 
 @router.get("/", response_model=List[GoalResponse])
 async def read_goals(
@@ -161,17 +163,18 @@ async def smart_create_goal(
         db.add(Task(title=t_title, goal_id=db_goal.id, user_id=current_user.id))
     
     await db.commit()
-    print(f"DEBUG: Successfully created smart goal {db_goal.id} for user {current_user.id}")
-
+    
+    # Reload with full data for response
     result = await db.execute(
         select(Goal)
-        .where(Goal.id == db_goal.id)
+        .where(Goal.id == obj_id)
         .options(
             selectinload(Goal.milestones),
             selectinload(Goal.tasks)
         )
     )
-    return result.scalars().first()
+    db_goal_final = result.scalars().first()
+    return GoalResponse.model_validate(db_goal_final).model_dump()
 
 @router.get("/{goal_id}", response_model=GoalResponse)
 async def read_goal(
@@ -222,9 +225,21 @@ async def update_goal(
         setattr(goal, field, value)
     
     db.add(goal)
+    await db.flush()
+    obj_id = goal.id
     await db.commit()
-    await db.refresh(goal)
-    return goal
+    
+    # Reload with relationships
+    result = await db.execute(
+        select(Goal)
+        .where(Goal.id == obj_id)
+        .options(
+            selectinload(Goal.milestones),
+            selectinload(Goal.tasks)
+        )
+    )
+    db_goal_final = result.scalars().first()
+    return GoalResponse.model_validate(db_goal_final).model_dump()
 
 @router.delete("/{goal_id}", response_model=GoalResponse)
 async def delete_goal(
@@ -236,18 +251,22 @@ async def delete_goal(
     """
     Delete a goal.
     """
+    # Load data needed for response BEFORE deletion
     result = await db.execute(
         select(Goal)
         .where(Goal.id == goal_id, Goal.user_id == current_user.id)
-        .options(selectinload(Goal.milestones))
+        .options(
+            selectinload(Goal.milestones),
+            selectinload(Goal.tasks)
+        )
     )
-    goal = result.scalars().first()
-    if not goal:
+    goal_to_return = result.scalars().first()
+    if not goal_to_return:
         raise HTTPException(status_code=404, detail="Goal not found")
     
-    await db.delete(goal)
+    await db.delete(goal_to_return)
     await db.commit()
-    return goal
+    return goal_to_return
 @router.post("/tasks/{task_id}/toggle", response_model=TaskResponse)
 async def toggle_task(
     *,

@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, computed_field, field_validator
 from app.models.finance import AssetType, TransactionType
 
 # Transaction Schemas
@@ -9,7 +9,16 @@ class TransactionBase(BaseModel):
     amount: float
     price_per_unit: float
     fee: float = 0.0
-    timestamp: datetime = datetime.utcnow()
+    timestamp: Optional[datetime] = None
+
+    @field_validator("timestamp", mode="after")
+    @classmethod
+    def set_timestamp(cls, v):
+        if v is None:
+            return datetime.now(timezone.utc).replace(tzinfo=None)
+        if v.tzinfo is not None:
+            return v.replace(tzinfo=None)
+        return v
 
 class TransactionCreate(TransactionBase):
     asset_id: int

@@ -49,6 +49,28 @@ async def log_meal_ai(
     await db.refresh(db_obj)
     return db_obj
 
+
+@router.delete("/meals/{meal_id}", response_model=MealLogResponse)
+async def delete_meal(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    meal_id: int
+) -> Any:
+    result = await db.execute(
+        select(MealLog).where(
+            MealLog.id == meal_id,
+            MealLog.user_id == current_user.id
+        )
+    )
+    meal = result.scalars().first()
+    if not meal:
+        raise HTTPException(status_code=404, detail="Meal not found")
+
+    await db.delete(meal)
+    await db.commit()
+    return meal
+
 @router.get("/meals", response_model=List[MealLogResponse])
 async def read_meals(
     db: AsyncSession = Depends(deps.get_db),

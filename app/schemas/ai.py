@@ -7,11 +7,6 @@ class MealAIResponse(BaseModel):
     carbs: float
     fat: float
 
-class JobAnalysisAIResponse(BaseModel):
-    match_score: int
-    matching_keywords: List[str]
-    missing_skills: List[str]
-
 class OKRAIResponse(BaseModel):
     title: str
     description: str
