@@ -17,6 +17,7 @@ class OfferStatus(str, enum.Enum):
 class JobOffer(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     title: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    company: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     status: Mapped[OfferStatus] = mapped_column(
         ENUM(
             OfferStatus,

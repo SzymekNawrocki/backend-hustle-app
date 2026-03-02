@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
 from app.models.user import User
 from app.models.job_offer import JobOffer
-from app.schemas.offers import JobOfferCreate, JobOfferResponse
+from app.schemas.offers import JobOfferCreate, JobOfferResponse, JobOfferUpdate
 
 router = APIRouter()
 
@@ -56,4 +56,28 @@ async def delete_offer(
 
     await db.delete(offer)
     await db.commit()
+    return offer
+
+
+@router.patch("/offers/{offer_id}", response_model=JobOfferResponse)
+async def update_offer(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    offer_id: int,
+    offer_in: JobOfferUpdate,
+) -> Any:
+    result = await db.execute(
+        select(JobOffer).where(JobOffer.id == offer_id, JobOffer.user_id == current_user.id)
+    )
+    offer = result.scalars().first()
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+
+    update_data = offer_in.model_dump(exclude_unset=True, mode="json")
+    for field, value in update_data.items():
+        setattr(offer, field, value)
+
+    await db.commit()
+    await db.refresh(offer)
     return offer

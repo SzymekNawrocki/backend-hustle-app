@@ -6,12 +6,18 @@ from app.models.job_offer import OfferStatus
 
 class JobOfferBase(BaseModel):
     title: str
+    company: Optional[str] = None
     status: OfferStatus
     url: str
 
 
 class JobOfferCreate(JobOfferBase):
     pass
+
+
+class JobOfferUpdate(BaseModel):
+    company: Optional[str] = None
+    status: Optional[OfferStatus] = None
 
 
 class JobOfferResponse(JobOfferBase):
