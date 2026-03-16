@@ -28,6 +28,7 @@ class JobOffer(Base):
         nullable=False,
     )
     url: Mapped[str] = mapped_column(String, nullable=False)
+    notes: Mapped[str | None] = mapped_column(String, nullable=True)
 
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
     user: Mapped["User"] = relationship("User", back_populates="job_offers")

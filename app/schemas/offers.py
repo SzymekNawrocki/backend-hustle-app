@@ -9,6 +9,7 @@ class JobOfferBase(BaseModel):
     company: Optional[str] = None
     status: OfferStatus
     url: str
+    notes: Optional[str] = None
 
 
 class JobOfferCreate(JobOfferBase):
@@ -18,6 +19,7 @@ class JobOfferCreate(JobOfferBase):
 class JobOfferUpdate(BaseModel):
     company: Optional[str] = None
     status: Optional[OfferStatus] = None
+    notes: Optional[str] = None
 
 
 class JobOfferResponse(JobOfferBase):
