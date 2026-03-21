@@ -15,6 +15,12 @@ class TransactionType(str, enum.Enum):
     BUY = "BUY"
     SELL = "SELL"
 
+class ExpenseCategory(str, enum.Enum):
+    OPLATY = "OPLATY"
+    HUSTLE = "HUSTLE"
+    LIFESTYLE = "LIFESTYLE"
+    INCOME = "INCOME"
+
 class Asset(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     ticker: Mapped[str] = mapped_column(String, index=True, nullable=False)
@@ -38,3 +44,13 @@ class Transaction(Base):
     
     asset_id: Mapped[int] = mapped_column(Integer, ForeignKey("asset.id"), nullable=False)
     asset: Mapped["Asset"] = relationship("Asset", back_populates="transactions")
+
+class Expense(Base):
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    category: Mapped[ExpenseCategory] = mapped_column(Enum(ExpenseCategory), nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(NaiveDateTime, default=datetime.utcnow)
+    
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
+    user: Mapped["User"] = relationship("User", back_populates="expenses")

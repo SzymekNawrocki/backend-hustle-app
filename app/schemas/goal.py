@@ -87,6 +87,9 @@ class GoalResponse(GoalBase):
 class DashboardToday(BaseModel):
     tasks: List[TaskResponse]
     habits: List[HabitResponse]
+    finance_balance: float = 0.0
+    health_calories: float = 0.0
+    active_goals_count: int = 0
 
 # Smart Create Schema
 class SmartCreateInput(BaseModel):

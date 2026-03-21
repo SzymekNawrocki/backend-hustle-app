@@ -50,4 +50,25 @@ class AIService:
         prompt = f"Goal Idea: {idea}"
         return await self._get_json_response(prompt, system_prompt)
 
+    async def parse_hustle_input(self, text: str) -> Dict[str, Any]:
+        system_prompt = (
+            "Jesteś analitykiem finansowym Hustle App. Twoim zadaniem jest wyciągnięcie danych z tekstu i kategoryzacja. "
+            "Zwróć TYLKO JSON: {amount: float, category: 'OPLATY'|'HUSTLE'|'LIFESTYLE'|'INCOME', description: string}. "
+            "Zasada: Jeśli wydatek to kurs, książka lub sprzęt - to HUSTLE. Jeśli to jedzenie/czynsz - OPLATY. Jeśli to przychód, wypłata, wpływ, bonus - to INCOME. Reszta to LIFESTYLE."
+        )
+        try:
+            chat_completion = await self.client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": text}
+                ],
+                model="llama3-8b-8192",
+                response_format={"type": "json_object"},
+                temperature=0
+            )
+            return json.loads(chat_completion.choices[0].message.content)
+        except Exception as e:
+            print(f"Hustle Parser Error: {e}")
+            return {"error": str(e)}
+
 ai_service = AIService()

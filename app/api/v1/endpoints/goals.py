@@ -7,7 +7,10 @@ from sqlalchemy.orm import selectinload
 
 from app.api import deps
 from app.models.user import User
-from app.models.goal import Goal, Milestone, Task, Habit
+from app.models.goal import Goal, Milestone, Task, Habit, GoalStatus
+from app.models.finance import Expense, ExpenseCategory
+from app.models.health import MealLog
+from sqlalchemy import func
 from app.schemas.goal import (
     GoalCreate, GoalResponse, DashboardToday, SmartCreateInput,
     TaskResponse, HabitResponse, MilestoneCreate, MilestoneResponse, GoalUpdate, GoalBase
@@ -106,9 +109,47 @@ async def get_dashboard_today(
     )
     habits = habits_result.scalars().all()
     
+    # Financial Stats (Today's Balance)
+    expenses_result = await db.execute(
+        select(Expense).where(
+            Expense.user_id == current_user.id,
+            Expense.timestamp >= today_start,
+            Expense.timestamp <= today_end
+        )
+    )
+    expenses = expenses_result.scalars().all()
+    
+    finance_balance = sum(
+        e.amount if e.category == ExpenseCategory.INCOME else -e.amount 
+        for e in expenses
+    )
+
+    # Health Stats (Today's Calories)
+    meals_result = await db.execute(
+        select(MealLog).where(
+            MealLog.user_id == current_user.id,
+            MealLog.created_at >= today_start,
+            MealLog.created_at <= today_end
+        )
+    )
+    meals = meals_result.scalars().all()
+    health_calories = sum(m.calories or 0.0 for m in meals)
+
+    # Active Goals Count
+    goals_count_result = await db.execute(
+        select(func.count(Goal.id)).where(
+            Goal.user_id == current_user.id,
+            Goal.status == GoalStatus.IN_PROGRESS
+        )
+    )
+    active_goals_count = goals_count_result.scalar() or 0
+    
     return {
         "tasks": tasks,
-        "habits": habits
+        "habits": habits,
+        "finance_balance": finance_balance,
+        "health_calories": health_calories,
+        "active_goals_count": active_goals_count
     }
 
 @router.post("/smart-create", response_model=GoalResponse)
