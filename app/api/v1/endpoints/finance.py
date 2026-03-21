@@ -17,106 +17,46 @@ from app.services.ai_service import ai_service
 
 router = APIRouter()
 
-@router.post("/assets", response_model=AssetResponse)
-async def create_asset(
-    *,
+@router.get("/expenses", response_model=List[ExpenseResponse])
+async def read_expenses(
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
-    asset_in: AssetCreate
-) -> Any:
-    db_obj = Asset(**asset_in.model_dump(), user_id=current_user.id)
-    db.add(db_obj)
-    await db.commit()
-    await db.refresh(db_obj)
-    return db_obj
-
-@router.post("/transactions", response_model=TransactionResponse)
-async def create_transaction(
-    *,
-    db: AsyncSession = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user),
-    tx_in: TransactionCreate
-) -> Any:
-    # Check asset ownership
-    result = await db.execute(
-        select(Asset).where(
-            Asset.id == tx_in.asset_id,
-            Asset.user_id == current_user.id
-        )
-    )
-    if not result.scalars().first():
-        raise HTTPException(status_code=404, detail="Asset not found")
-        
-    tx_data = tx_in.model_dump()
-    if tx_data.get("timestamp") and hasattr(tx_data["timestamp"], "tzinfo") and tx_data["timestamp"].tzinfo is not None:
-        tx_data["timestamp"] = tx_data["timestamp"].replace(tzinfo=None)
-        
-    db_obj = Transaction(**tx_data)
-    db.add(db_obj)
-    await db.commit()
-    await db.refresh(db_obj)
-    return db_obj
-
-
-@router.delete("/assets/{asset_id}", response_model=AssetResponse)
-async def delete_asset(
-    *,
-    db: AsyncSession = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user),
-    asset_id: int
-) -> Any:
-    result = await db.execute(
-        select(Asset).where(
-            Asset.id == asset_id,
-            Asset.user_id == current_user.id
-        )
-    )
-    asset = result.scalars().first()
-    if not asset:
-        raise HTTPException(status_code=404, detail="Asset not found")
-
-    await db.delete(asset)
-    await db.commit()
-    return asset
-
-
-@router.delete("/transactions/{transaction_id}", response_model=TransactionResponse)
-async def delete_transaction(
-    *,
-    db: AsyncSession = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user),
-    transaction_id: int
-) -> Any:
-    result = await db.execute(
-        select(Transaction)
-        .join(Asset)
-        .where(
-            Transaction.id == transaction_id,
-            Asset.user_id == current_user.id
-        )
-    )
-    transaction = result.scalars().first()
-    if not transaction:
-        raise HTTPException(status_code=404, detail="Transaction not found")
-
-    await db.delete(transaction)
-    await db.commit()
-    return transaction
-
-@router.get("/portfolio", response_model=List[AssetPortfolioResponse])
-async def get_portfolio(
-    db: AsyncSession = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user)
+    skip: int = 0,
+    limit: int = 100
 ) -> Any:
     """
-    Fetch all user assets with calculated quantity and average buy price.
+    Retrieve expenses for current user.
     """
     result = await db.execute(
-        select(Asset)
-        .where(Asset.user_id == current_user.id)
-        .options(selectinload(Asset.transactions))
+        select(Expense)
+        .where(Expense.user_id == current_user.id)
+        .order_by(Expense.timestamp.desc())
+        .offset(skip)
+        .limit(limit)
     )
     return result.scalars().all()
+
+@router.delete("/expenses/{expense_id}", response_model=ExpenseResponse)
+async def delete_expense(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    expense_id: int
+) -> Any:
+    """
+    Delete an expense.
+    """
+    result = await db.execute(
+        select(Expense)
+        .where(Expense.id == expense_id, Expense.user_id == current_user.id)
+    )
+    expense = result.scalars().first()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    
+    await db.delete(expense)
+    await db.commit()
+    return expense
 
 @router.post("/hustle-input", response_model=ExpenseResponse)
 async def create_hustle_expense(
@@ -136,7 +76,7 @@ async def create_hustle_expense(
     
     # Validate parsed data
     amount = parsed_data.get("amount")
-    category = parsed_data.get("category")
+    category = hustle_in.forced_category or parsed_data.get("category")
     description = parsed_data.get("description")
     
     # Handle missing amount specifically
