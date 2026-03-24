@@ -208,7 +208,7 @@ async def smart_create_goal(
     # Reload with full data for response
     result = await db.execute(
         select(Goal)
-        .where(Goal.id == obj_id)
+        .where(Goal.id == db_goal.id)
         .options(
             selectinload(Goal.milestones),
             selectinload(Goal.tasks)
