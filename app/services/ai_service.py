@@ -29,7 +29,6 @@ class AIService:
             return {"error": "Critical analysis failure", "details": str(e)}
 
 
-
     async def parse_meal(self, text: str) -> Dict[str, Any]:
         system_prompt = "You are a nutritional expert. Extract calories (int), protein (float), carbs (float), and fat (float) from the meal description."
         return await self._get_json_response(text, system_prompt)

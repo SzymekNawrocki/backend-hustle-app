@@ -6,11 +6,8 @@ from sqlalchemy.orm import selectinload
 
 from app.api import deps
 from app.models.user import User
-from app.models.finance import Asset, Transaction, Expense
+from app.models.finance import Expense
 from app.schemas.finance import (
-    AssetCreate, AssetResponse,
-    TransactionCreate, TransactionResponse,
-    AssetPortfolioResponse,
     ExpenseResponse, HustleInputRequest
 )
 from app.services.ai_service import ai_service
