@@ -94,3 +94,13 @@ class DashboardToday(BaseModel):
 # Smart Create Schema
 class SmartCreateInput(BaseModel):
     idea: str
+
+# Activity History
+class ActivityDay(BaseModel):
+    date: str
+    finance: float
+    health: float
+    goals: int
+
+class ActivityHistory(BaseModel):
+    days: List[ActivityDay]

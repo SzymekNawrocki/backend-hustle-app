@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,8 @@ from app.models.health import MealLog
 from sqlalchemy import func
 from app.schemas.goal import (
     GoalCreate, GoalResponse, DashboardToday, SmartCreateInput,
-    TaskResponse, HabitResponse, MilestoneCreate, MilestoneResponse, GoalUpdate, GoalBase
+    TaskResponse, HabitResponse, MilestoneCreate, MilestoneResponse, GoalUpdate, GoalBase,
+    ActivityHistory, ActivityDay
 )
 from app.schemas.ai import OKRAIResponse
 from app.services.ai_service import ai_service
@@ -151,6 +152,60 @@ async def get_dashboard_today(
         "health_calories": health_calories,
         "active_goals_count": active_goals_count
     }
+
+@router.get("/activity/history", response_model=ActivityHistory)
+async def get_activity_history(
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+) -> Any:
+    """
+    Get 7-day activity history for the dashboard chart.
+    """
+    days = []
+    
+    # Active Goals Count (Current)
+    goals_count_result = await db.execute(
+        select(func.count(Goal.id)).where(
+            Goal.user_id == current_user.id,
+            Goal.status == GoalStatus.IN_PROGRESS
+        )
+    )
+    active_goals_count = goals_count_result.scalar() or 0
+
+    for i in range(6, -1, -1):
+        day_date = date.today() - timedelta(days=i)
+        day_start = datetime.combine(day_date, datetime.min.time())
+        day_end = datetime.combine(day_date, datetime.max.time())
+        
+        # Finance Stats
+        expenses_result = await db.execute(
+            select(Expense).where(
+                Expense.user_id == current_user.id,
+                Expense.timestamp >= day_start,
+                Expense.timestamp <= day_end
+            )
+        )
+        expenses = expenses_result.scalars().all()
+        balance = sum(e.amount if e.category == ExpenseCategory.INCOME else -e.amount for e in expenses)
+        
+        # Health Stats
+        meals_result = await db.execute(
+            select(MealLog).where(
+                MealLog.user_id == current_user.id,
+                MealLog.created_at >= day_start,
+                MealLog.created_at <= day_end
+            )
+        )
+        calories = sum(m.calories or 0.0 for m in meals_result.scalars().all())
+        
+        days.append(ActivityDay(
+            date=day_date.strftime("%d/%m"),
+            finance=float(balance),
+            health=float(calories),
+            goals=int(active_goals_count)
+        ))
+    
+    return ActivityHistory(days=days)
 
 @router.post("/smart-create", response_model=GoalResponse)
 async def smart_create_goal(
