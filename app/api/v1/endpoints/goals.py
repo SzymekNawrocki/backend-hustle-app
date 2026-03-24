@@ -10,7 +10,8 @@ from app.models.user import User
 from app.models.goal import Goal, Milestone, Task, Habit, GoalStatus
 from app.models.finance import Expense, ExpenseCategory
 from app.models.health import MealLog
-from sqlalchemy import func
+from app.models.job_offer import JobOffer
+from sqlalchemy import func, desc
 from app.schemas.goal import (
     GoalCreate, GoalResponse, DashboardToday, SmartCreateInput,
     TaskResponse, HabitResponse, MilestoneCreate, MilestoneResponse, GoalUpdate, GoalBase,
@@ -91,11 +92,12 @@ async def get_dashboard_today(
     current_user: User = Depends(deps.get_current_user)
 ) -> Any:
     """
-    Get tasks due today and all habits for the dashboard.
+    Get dashboard summary including today's tasks/meals and recent activity.
     """
     today_start = datetime.combine(date.today(), datetime.min.time())
     today_end = datetime.combine(date.today(), datetime.max.time())
     
+    # Today's Tasks
     tasks_result = await db.execute(
         select(Task).where(
             Task.user_id == current_user.id,
@@ -105,36 +107,32 @@ async def get_dashboard_today(
     )
     tasks = tasks_result.scalars().all()
     
+    # Habits
     habits_result = await db.execute(
         select(Habit).where(Habit.user_id == current_user.id)
     )
     habits = habits_result.scalars().all()
     
-    # Financial Stats (Today's Balance)
-    expenses_result = await db.execute(
-        select(Expense).where(
-            Expense.user_id == current_user.id,
-            Expense.timestamp >= today_start,
-            Expense.timestamp <= today_end
-        )
+    # Total Financial Balance (Current state)
+    all_expenses_result = await db.execute(
+        select(Expense).where(Expense.user_id == current_user.id)
     )
-    expenses = expenses_result.scalars().all()
-    
-    finance_balance = sum(
+    all_expenses = all_expenses_result.scalars().all()
+    total_balance = sum(
         e.amount if e.category == ExpenseCategory.INCOME else -e.amount 
-        for e in expenses
+        for e in all_expenses
     )
 
-    # Health Stats (Today's Calories)
-    meals_result = await db.execute(
+    # Today's Calories
+    today_meals_result = await db.execute(
         select(MealLog).where(
             MealLog.user_id == current_user.id,
             MealLog.created_at >= today_start,
             MealLog.created_at <= today_end
         )
     )
-    meals = meals_result.scalars().all()
-    health_calories = sum(m.calories or 0.0 for m in meals)
+    today_meals = today_meals_result.scalars().all()
+    health_calories = sum(m.calories or 0.0 for m in today_meals)
 
     # Active Goals Count
     goals_count_result = await db.execute(
@@ -144,13 +142,42 @@ async def get_dashboard_today(
         )
     )
     active_goals_count = goals_count_result.scalar() or 0
+
+    # Recent Job Offers (Last 5)
+    offers_result = await db.execute(
+        select(JobOffer).where(JobOffer.user_id == current_user.id)
+        .order_by(desc(JobOffer.id))
+        .limit(5)
+    )
+    recent_offers = offers_result.scalars().all()
+
+    # Recent Expenses (Last 5)
+    recent_expenses_result = await db.execute(
+        select(Expense).where(Expense.user_id == current_user.id)
+        .order_by(desc(Expense.timestamp))
+        .limit(5)
+    )
+    recent_expenses = recent_expenses_result.scalars().all()
+
+    # Latest Goal
+    latest_goal_result = await db.execute(
+        select(Goal).where(Goal.user_id == current_user.id)
+        .order_by(desc(Goal.id))
+        .limit(1)
+        .options(selectinload(Goal.milestones), selectinload(Goal.tasks))
+    )
+    latest_goal = latest_goal_result.scalars().first()
     
     return {
         "tasks": tasks,
         "habits": habits,
-        "finance_balance": finance_balance,
+        "finance_balance": total_balance,
         "health_calories": health_calories,
-        "active_goals_count": active_goals_count
+        "active_goals_count": active_goals_count,
+        "recent_offers": recent_offers,
+        "today_meals": today_meals,
+        "recent_expenses": recent_expenses,
+        "latest_goal": latest_goal
     }
 
 @router.get("/activity/history", response_model=ActivityHistory)

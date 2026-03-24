@@ -2,6 +2,9 @@ from datetime import date, datetime
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, computed_field
 from app.models.goal import GoalCategory, GoalStatus, HabitFrequency
+from app.schemas.finance import ExpenseResponse
+from app.schemas.health import MealLogResponse
+from app.schemas.offers import JobOfferResponse
 
 # Milestone Schemas
 class MilestoneBase(BaseModel):
@@ -90,6 +93,10 @@ class DashboardToday(BaseModel):
     finance_balance: float = 0.0
     health_calories: float = 0.0
     active_goals_count: int = 0
+    recent_offers: List[JobOfferResponse] = []
+    today_meals: List[MealLogResponse] = []
+    recent_expenses: List[ExpenseResponse] = []
+    latest_goal: Optional[GoalResponse] = None
 
 # Smart Create Schema
 class SmartCreateInput(BaseModel):
