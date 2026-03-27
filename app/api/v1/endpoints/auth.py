@@ -10,6 +10,8 @@ from app.core import security
 from app.core.config import settings
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse, Token
+from app.services.demo_service import reset_demo_data
+
 
 router = APIRouter()
 
@@ -68,3 +70,44 @@ async def login(
         "access_token": token,
         "token_type": "bearer",
     }
+
+@router.get("/me", response_model=UserResponse)
+async def read_current_user(
+    current_user: User = Depends(deps.get_current_user)
+) -> Any:
+    return current_user
+
+@router.post("/demo-login", response_model=Token)
+async def demo_login(
+    db: AsyncSession = Depends(deps.get_db)
+) -> Any:
+    DEMO_EMAIL = "guest@demo.com"
+    
+    # 1. Sprawdź czy użytkownik demo istnieje, jeśli nie - stwórz
+    result = await db.execute(select(User).where(User.email == DEMO_EMAIL))
+    user = result.scalars().first()
+    
+    if not user:
+        user = User(
+            email=DEMO_EMAIL,
+            hashed_password=security.get_password_hash("demo-guest-password-not-needed"),
+            full_name="Demo Guest",
+            is_demo=True
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    
+    # 2. Resetuj dane demo
+    await reset_demo_data(db, user.id)
+    
+    # 3. Generowanie tokena
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    token = security.create_access_token(
+        user.id, expires_delta=access_token_expires
+    )
+    
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+    }

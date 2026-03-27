@@ -9,6 +9,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     full_name: Mapped[str] = mapped_column(String, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
 
     goals: Mapped[List["Goal"]] = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
     tasks: Mapped[List["Task"]] = relationship("Task", back_populates="user", cascade="all, delete-orphan")
