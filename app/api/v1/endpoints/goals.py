@@ -253,11 +253,11 @@ async def smart_create_goal(
     
     # Ensure all required fields exist for OKRAIResponse
     if "title" not in ai_data: ai_data["title"] = input_data.idea[:50]
-    if "description" not in ai_data: ai_data["description"] = f"Plan dla: {input_data.idea}"
+    if "description" not in ai_data: ai_data["description"] = f"Plan for: {input_data.idea}"
     if "milestones" not in ai_data or not isinstance(ai_data["milestones"], list):
-        ai_data["milestones"] = ["Rozpoczęcie projektu", "Realizacja głównych kroków", "Finalizacja"]
+        ai_data["milestones"] = ["Project kickoff", "Execute key steps", "Wrap up"]
     if "tasks" not in ai_data or not isinstance(ai_data["tasks"], list):
-        ai_data["tasks"] = ["Zdefiniuj pierwszy krok", "Przygotuj narzędzia", "Działaj!"]
+        ai_data["tasks"] = ["Define the first step", "Prepare the tools", "Take action!"]
 
     try:
         okr = OKRAIResponse(**ai_data)
@@ -265,8 +265,8 @@ async def smart_create_goal(
         print(f"DEBUG: Validation error: {e}")
         # Final fallback if even defaults are weird
         okr = OKRAIResponse(
-            title=ai_data.get("title", "Nowy Cel"),
-            description=ai_data.get("description", "Brak opisu"),
+            title=ai_data.get("title", "New goal"),
+            description=ai_data.get("description", "No description"),
             milestones=ai_data.get("milestones", []),
             tasks=ai_data.get("tasks", [])
         )

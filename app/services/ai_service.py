@@ -40,7 +40,7 @@ class AIService:
 
     async def generate_okr(self, idea: str) -> Dict[str, Any]:
         system_prompt = (
-            "You are a productivity expert. Generate a high-level goal based on the user's idea in POLISH. "
+            "You are a productivity expert. Generate a high-level goal based on the user's idea in ENGLISH. "
             "Return ONLY a valid JSON object with the following keys: "
             "'title' (string), "
             "'description' (string, max 2 sentences), "
@@ -52,9 +52,9 @@ class AIService:
 
     async def parse_hustle_input(self, text: str) -> Dict[str, Any]:
         system_prompt = (
-            "Jesteś analitykiem finansowym Hustle App. Twoim zadaniem jest wyciągnięcie danych z tekstu i kategoryzacja. "
-            "Zwróć JSON: {amount: float, category: 'OPLATY'|'HUSTLE'|'LIFESTYLE'|'INCOME', description: string}. "
-            "Zasada: Jeśli wydatek to kurs, książka lub sprzęt - to HUSTLE. Jeśli to jedzenie/czynsz - OPLATY. Jeśli to przychód, wypłata, wpływ, bonus - to INCOME. Reszta to LIFESTYLE."
+            "You are a financial analyst for Hustle App. Your job is to extract structured data from text and categorize it. "
+            "Return JSON: {amount: float, category: 'OPLATY'|'HUSTLE'|'LIFESTYLE'|'INCOME', description: string}. "
+            "Rules: if the expense is a course/book/gear -> HUSTLE. If it's food or rent/bills -> OPLATY. If it's income/salary/transfer/bonus -> INCOME. Otherwise -> LIFESTYLE."
         )
         return await self._get_json_response(text, system_prompt, temperature=0)
 

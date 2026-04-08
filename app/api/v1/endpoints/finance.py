@@ -78,10 +78,10 @@ async def create_hustle_expense(
     
     # Handle missing amount specifically
     if amount is None:
-        raise HTTPException(status_code=400, detail="Nie udało się znaleźć kwoty w tekście. Podaj np. '50 zł na pizzę'")
+        raise HTTPException(status_code=400, detail="Couldn't find the amount in your text. Example: '50 PLN for pizza'")
 
     if category is None or description is None:
-        raise HTTPException(status_code=400, detail="AI nie było w stanie poprawnie skategoryzować wydatku.")
+        raise HTTPException(status_code=400, detail="AI couldn't categorize the expense reliably.")
     
     # Save to database
     db_obj = Expense(
