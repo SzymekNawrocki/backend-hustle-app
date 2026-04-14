@@ -1,11 +1,13 @@
+from math import ceil
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.api import deps
 from app.core.limiter import limiter
+from app.schemas.pagination import PaginatedResponse
 from app.models.user import User
 from app.models.finance import Expense
 from app.schemas.finance import (
@@ -15,24 +17,37 @@ from app.services.ai_service import ai_service
 
 router = APIRouter()
 
-@router.get("/expenses", response_model=List[ExpenseResponse])
+@router.get("/expenses", response_model=PaginatedResponse[ExpenseResponse])
 async def read_expenses(
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
-    skip: int = 0,
-    limit: int = 100
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
 ) -> Any:
     """
-    Retrieve expenses for current user.
+    Retrieve expenses for current user (paginated).
     """
+    offset = (page - 1) * limit
+
+    count_result = await db.execute(
+        select(func.count(Expense.id)).where(Expense.user_id == current_user.id)
+    )
+    total = count_result.scalar() or 0
+
     result = await db.execute(
         select(Expense)
         .where(Expense.user_id == current_user.id)
         .order_by(Expense.timestamp.desc())
-        .offset(skip)
+        .offset(offset)
         .limit(limit)
     )
-    return result.scalars().all()
+
+    return {
+        "items": result.scalars().all(),
+        "total": total,
+        "page": page,
+        "pages": ceil(total / limit) if total > 0 else 1,
+    }
 
 @router.delete("/expenses/{expense_id}", response_model=ExpenseResponse)
 async def delete_expense(

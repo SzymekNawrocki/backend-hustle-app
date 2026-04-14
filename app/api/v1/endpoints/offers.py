@@ -1,13 +1,15 @@
+from math import ceil
 from typing import Any, List
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
 from app.models.user import User
 from app.models.job_offer import JobOffer
 from app.schemas.offers import JobOfferCreate, JobOfferResponse, JobOfferUpdate
+from app.schemas.pagination import PaginatedResponse
 
 router = APIRouter()
 
@@ -26,18 +28,35 @@ async def create_offer(
     return db_obj
 
 
-@router.get("/offers", response_model=List[JobOfferResponse])
+@router.get("/offers", response_model=PaginatedResponse[JobOfferResponse])
 async def read_offers(
     *,
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
 ) -> Any:
+    offset = (page - 1) * limit
+
+    count_result = await db.execute(
+        select(func.count(JobOffer.id)).where(JobOffer.user_id == current_user.id)
+    )
+    total = count_result.scalar() or 0
+
     result = await db.execute(
         select(JobOffer)
         .where(JobOffer.user_id == current_user.id)
         .order_by(JobOffer.id.desc())
+        .offset(offset)
+        .limit(limit)
     )
-    return result.scalars().all()
+
+    return {
+        "items": result.scalars().all(),
+        "total": total,
+        "page": page,
+        "pages": ceil(total / limit) if total > 0 else 1,
+    }
 
 
 @router.delete("/offers/{offer_id}", response_model=JobOfferResponse)

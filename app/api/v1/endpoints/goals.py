@@ -1,12 +1,14 @@
 from datetime import datetime, date, timedelta
+from math import ceil
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api import deps
 from app.core.limiter import limiter
+from app.schemas.pagination import PaginatedResponse
 from app.models.user import User
 from app.models.goal import Goal, Milestone, Task, Habit, GoalStatus
 from app.models.finance import Expense, ExpenseCategory
@@ -62,20 +64,27 @@ async def create_goal(
     db_goal_final = result.scalars().first()
     return GoalResponse.model_validate(db_goal_final).model_dump()
 
-@router.get("/", response_model=List[GoalResponse])
+@router.get("/", response_model=PaginatedResponse[GoalResponse])
 async def read_goals(
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
-    skip: int = 0,
-    limit: int = 100
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
 ) -> Any:
     """
-    Retrieve goals for current user.
+    Retrieve goals for current user (paginated).
     """
+    offset = (page - 1) * limit
+
+    count_result = await db.execute(
+        select(func.count(Goal.id)).where(Goal.user_id == current_user.id)
+    )
+    total = count_result.scalar() or 0
+
     result = await db.execute(
         select(Goal)
         .where(Goal.user_id == current_user.id)
-        .offset(skip)
+        .offset(offset)
         .limit(limit)
         .options(
             selectinload(Goal.milestones),
@@ -83,8 +92,13 @@ async def read_goals(
         )
     )
     goals = result.scalars().all()
-    print(f"DEBUG: read_goals for user {current_user.id} found {len(goals)} goals")
-    return goals
+
+    return {
+        "items": goals,
+        "total": total,
+        "page": page,
+        "pages": ceil(total / limit) if total > 0 else 1,
+    }
 
 
 @router.get("/dashboard/today", response_model=DashboardToday)
