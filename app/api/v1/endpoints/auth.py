@@ -47,9 +47,9 @@ async def register(
 @limiter.limit("5/minute", key_func=get_remote_address)
 async def login(
     request: Request,
+    response: Response,
     db: AsyncSession = Depends(deps.get_db),
     form_data: OAuth2PasswordRequestForm = Depends(),
-    response: Response = None,
 ) -> Any:
     # Szukanie użytkownika po emailu (form_data.username)
     result = await db.execute(select(User).where(User.email == form_data.username))
@@ -71,17 +71,16 @@ async def login(
         user.id, expires_delta=access_token_expires
     )
 
-    if response is not None:
-        response.set_cookie(
-            key=settings.AUTH_COOKIE_NAME,
-            value=token,
-            httponly=True,
-            secure=settings.AUTH_COOKIE_SECURE,
-            samesite=settings.AUTH_COOKIE_SAMESITE,
-            max_age=int(access_token_expires.total_seconds()),
-            path="/",
-        )
-    
+    response.set_cookie(
+        key=settings.AUTH_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=settings.AUTH_COOKIE_SECURE,
+        samesite=settings.AUTH_COOKIE_SAMESITE,
+        max_age=int(access_token_expires.total_seconds()),
+        path="/",
+    )
+
     return {
         "access_token": token,
         "token_type": "bearer",
@@ -124,17 +123,16 @@ async def demo_login(
         user.id, expires_delta=access_token_expires
     )
 
-    if response is not None:
-        response.set_cookie(
-            key=settings.AUTH_COOKIE_NAME,
-            value=token,
-            httponly=True,
-            secure=settings.AUTH_COOKIE_SECURE,
-            samesite=settings.AUTH_COOKIE_SAMESITE,
-            max_age=int(access_token_expires.total_seconds()),
-            path="/",
-        )
-    
+    response.set_cookie(
+        key=settings.AUTH_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=settings.AUTH_COOKIE_SECURE,
+        samesite=settings.AUTH_COOKIE_SAMESITE,
+        max_age=int(access_token_expires.total_seconds()),
+        path="/",
+    )
+
     return {
         "access_token": token,
         "token_type": "bearer",
