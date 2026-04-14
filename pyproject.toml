@@ -1,0 +1,43 @@
+[tool.ruff]
+# Minimalna wersja Pythona do której targetujemy kod.
+target-version = "py311"
+
+# Maksymalna długość linii — luźniejsza niż PEP8 (79), żeby pasowała do FastAPI.
+line-length = 100
+
+# Katalogi których ruff nie sprawdza.
+exclude = [
+    "venv",
+    ".venv",
+    "__pycache__",
+    # Migracje są auto-generowane przez Alembic — nie lintujemy.
+    "alembic/versions",
+    "alembic/env.py",
+]
+
+[tool.ruff.lint]
+# Reguły które sprawdzamy:
+#   E4  — błędy importów (duplikaty, złe miejsce)
+#   E7  — błędy składniowe wyrażeń (porównania do None, zbędne nawiasy)
+#   E9  — błędy runtime (syntax error, niemożliwy import)
+#   F   — Pyflakes: nieużywane importy (F401), niezdefiniowane nazwy (F821) itp.
+#   W   — ostrzeżenia pycodestyle (trailing whitespace itp.)
+#   B   — flake8-bugbear: typowe pułapki (mutable default args itp.)
+select = ["E4", "E7", "E9", "F", "W", "B"]
+
+ignore = [
+    # FastAPI masowo używa funkcji jako wartości domyślnych (Depends, Query).
+    # B008 flagowałby każdy endpoint — wyłączamy.
+    "B008",
+    # raise ... w bloku except bez `from` — świadomy wybór w wielu miejscach.
+    "B904",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# W testach assert jest pożądany (pytest opiera się na assert).
+"tests/**" = ["B011"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Krótki traceback domyślnie.
+addopts = "--tb=short"

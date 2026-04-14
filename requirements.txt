@@ -13,3 +13,8 @@ groq
 langchain-groq
 httpx
 slowapi
+
+# Dev / CI
+ruff
+pytest
+pytest-asyncio

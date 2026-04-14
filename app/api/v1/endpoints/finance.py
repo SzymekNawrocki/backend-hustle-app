@@ -3,7 +3,6 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select
-from sqlalchemy.orm import selectinload
 
 from app.api import deps
 from app.core.limiter import limiter
