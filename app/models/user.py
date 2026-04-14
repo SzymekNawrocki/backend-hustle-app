@@ -1,7 +1,13 @@
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import String, Boolean, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base_class import Base
+
+if TYPE_CHECKING:
+    from app.models.goal import Goal, Task, Habit
+    from app.models.health import MealLog
+    from app.models.job_offer import JobOffer
+    from app.models.finance import Expense
 
 class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)

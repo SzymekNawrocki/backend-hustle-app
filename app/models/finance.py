@@ -1,9 +1,12 @@
 import enum
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import String, Integer, ForeignKey, DateTime, Enum, Float, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base_class import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
 from app.db.types import NaiveDateTime
 
 class ExpenseCategory(str, enum.Enum):

@@ -1,8 +1,11 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from datetime import datetime
 from sqlalchemy import String, Integer, ForeignKey, DateTime, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base_class import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
 from app.db.types import NaiveDateTime
 
 class MealLog(Base):
