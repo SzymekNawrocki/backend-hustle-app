@@ -1,5 +1,6 @@
 import json
 from typing import Dict, Any, List
+from fastapi import HTTPException
 from groq import AsyncGroq, RateLimitError, APIConnectionError
 from app.core.config import settings
 
@@ -19,9 +20,18 @@ class AIService:
                 response_format={"type": "json_object"},
                 temperature=temperature
             )
-            return json.loads(chat_completion.choices[0].message.content)
+            raw = chat_completion.choices[0].message.content
+            try:
+                return json.loads(raw)
+            except json.JSONDecodeError:
+                print(f"AI JSON parse error. Raw response (truncated): {raw[:500]!r}")
+                raise HTTPException(
+                    status_code=502,
+                    detail="AI returned invalid response, try again",
+                )
+        except HTTPException:
+            raise
         except (RateLimitError, APIConnectionError) as e:
-            # Simple fallback/graceful error handling
             print(f"AI Service Error: {e}")
             return {"error": "AI service temporarily unavailable", "details": str(e)}
         except Exception as e:
