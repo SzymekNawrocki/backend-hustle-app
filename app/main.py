@@ -102,7 +102,6 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) 
     return JSONResponse(
         status_code=429,
         content={"detail": f"Za dużo requestów. Limit: {exc.detail}. Poczekaj chwilę i spróbuj ponownie."},
-        headers={"Access-Control-Allow-Origin": "*"},
     )
 
 
@@ -122,7 +121,6 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail},
-        headers={"Access-Control-Allow-Origin": "*"},
     )
 
 
@@ -142,7 +140,6 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal Server Error"},
-        headers={"Access-Control-Allow-Origin": "*"},
     )
 
 

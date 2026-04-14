@@ -6,7 +6,12 @@ engine = create_async_engine(
     echo=False,
     future=True,
     pool_pre_ping=True,
-    connect_args={"ssl": settings.DB_SSL},
+    # asyncpg statement cache must be disabled for transaction-mode poolers (like Neon's)
+    connect_args={
+        "ssl": settings.DB_SSL,
+        "statement_cache_size": 0,
+        "prepared_statement_cache_size": 0,
+    },
 )
 
 AsyncSessionLocal = async_sessionmaker(
