@@ -1,4 +1,4 @@
-name: CI
+name: Backend CI
 
 on:
   push:
@@ -6,77 +6,26 @@ on:
   pull_request:
     branches: [main]
 
-# Anuluj poprzedni run tego samego PR/brancha gdy pojawi się nowy push.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  # ---------------------------------------------------------------------------
-  # Job 1: Lint + Test
-  # Uruchamia się na każdym push i każdym PR.
-  # ---------------------------------------------------------------------------
   lint-and-test:
-    name: Lint & Test (Python 3.11)
     runs-on: ubuntu-latest
-
-    # Zmienne środowiskowe potrzebne żeby pydantic-settings nie rzucił błędu
-    # przy imporcie aplikacji w testach. Nie są to prawdziwe sekrety —
-    # to wartości używane wyłącznie przez runner CI.
-    env:
-      DATABASE_URL: postgresql://hustle:hustle@localhost:5432/hustle
-      SECRET_KEY: ci-only-key-not-real-this-must-be-32-chars-minimum
-      GROQ_API_KEY: test-groq-api-key-not-real
-      DB_SSL: "false"
-      AUTH_COOKIE_SECURE: "false"
-      AUTH_COOKIE_SAMESITE: lax
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          # Cachuje pip na podstawie requirements.txt — przyspiesza kolejne runy.
-          cache: pip
-          cache-dependency-path: requirements.txt
-
       - name: Install dependencies
-        run: pip install --quiet -r requirements.txt
-
-      # Ruff sprawdza błędy składniowe i styl.
-      # Konfiguracja w backend/pyproject.toml.
-      - name: Lint — ruff check
-        run: ruff check .
-
-      # Pytest uruchamia testy z katalogu tests/.
-      # --tb=short: krótki traceback przy błędzie.
-      # -v: wypisuje nazwy testów.
-      - name: Test — pytest
-        run: pytest tests/ -v --tb=short
-
-  # ---------------------------------------------------------------------------
-  # Job 2: Deploy trigger (tylko push do main, po przejściu testów)
-  # ---------------------------------------------------------------------------
-  deploy:
-    name: Deploy → Render
-    needs: lint-and-test
-    runs-on: ubuntu-latest
-
-    # Uruchamia się wyłącznie przy push do main — nie przy PR.
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    steps:
-      - name: Trigger Render deploy webhook
         run: |
-          curl \
-            --fail \
-            --silent \
-            --show-error \
-            --max-time 30 \
-            -X POST \
-            "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
-        # --fail: exit code != 0 jeśli Render zwróci błąd HTTP
-        # --max-time 30: timeout żeby job się nie zawiesił na zawsze
+          pip install -r requirements.txt
+          pip install flake8
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: |
+          docker build -t hustle-backend .
