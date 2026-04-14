@@ -95,8 +95,8 @@ async def read_current_user(
 
 @router.post("/demo-login", response_model=Token)
 async def demo_login(
-    db: AsyncSession = Depends(deps.get_db),
     response: Response,
+    db: AsyncSession = Depends(deps.get_db),
 ) -> Any:
     DEMO_EMAIL = "guest@demo.com"
     
