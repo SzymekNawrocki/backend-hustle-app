@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     GROQ_API_KEY: str
 
+    # True for Supabase/production (requires SSL). False for local postgres.
+    DB_SSL: bool = True
+
     AUTH_COOKIE_NAME: str = "token"
     # For localhost/dev keep False. For cross-site production typically True with SameSite=None.
     AUTH_COOKIE_SECURE: bool = False

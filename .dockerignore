@@ -1,0 +1,54 @@
+# =============================================================================
+# .dockerignore — co NIE trafia do obrazu Docker.
+# Plik musi być obok Dockerfile (w backend/).
+# =============================================================================
+
+# Środowisko wirtualne — paczki instalujemy w Dockerfile z requirements.txt
+venv/
+.venv/
+ENV/
+env/
+
+# Bajtkod Pythona — generuje się przy starcie kontenera
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Sekrety — NIGDY nie wchodzą do obrazu
+.env
+.env.*
+!.env.example
+
+# Cache narzędzi
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System
+.DS_Store
+Thumbs.db
+
+# Logi i bazy danych SQLite (do testów)
+*.log
+*.db
+*.sqlite3
+
+# Dokumentacja — nie potrzebna w runtime
+*.md
+
+# Skrypty deweloperskie — nie potrzebne w runtime
+scripts/
+
+# Testy — nie uruchamiamy w produkcyjnym obrazie
+tests/
+test_*.py
+*_test.py
