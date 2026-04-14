@@ -11,7 +11,7 @@ from app.schemas.pagination import PaginatedResponse
 from app.models.user import User
 from app.models.finance import Expense
 from app.schemas.finance import (
-    ExpenseResponse, HustleInputRequest
+    ExpenseResponse, ExpenseUpdate, HustleInputRequest
 )
 from app.services.ai_service import ai_service
 
@@ -48,6 +48,29 @@ async def read_expenses(
         "page": page,
         "pages": ceil(total / limit) if total > 0 else 1,
     }
+
+@router.patch("/expenses/{expense_id}", response_model=ExpenseResponse)
+async def update_expense(
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    expense_id: int,
+    expense_in: ExpenseUpdate,
+) -> Any:
+    result = await db.execute(
+        select(Expense).where(Expense.id == expense_id, Expense.user_id == current_user.id)
+    )
+    expense = result.scalars().first()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+
+    for field, value in expense_in.model_dump(exclude_unset=True).items():
+        setattr(expense, field, value)
+
+    await db.commit()
+    await db.refresh(expense)
+    return expense
+
 
 @router.delete("/expenses/{expense_id}", response_model=ExpenseResponse)
 async def delete_expense(
