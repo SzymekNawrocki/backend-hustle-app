@@ -1,6 +1,4 @@
-from datetime import timedelta
-from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Response, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,6 +93,7 @@ async def read_current_user(
 @router.post("/demo-login", response_model=Token)
 async def demo_login(
     response: Response,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(deps.get_db),
 ) -> Any:
     DEMO_EMAIL = "guest@demo.com"
@@ -114,7 +113,10 @@ async def demo_login(
         await db.commit()
         await db.refresh(user)
     
-    # 2. Resetuj dane demo
+    # 2. Resetuj dane demo w tle, aby logowanie było natychmiastowe
+    # background_tasks.add_task(reset_demo_data, db, user.id) 
+    # Uwaga: Musimy upewnić się, że db session jest żywa. Lepiej zrobić to tutaj przed returnem ale zoptymalizowane.
+    # Na razie zostawimy resetowanie synchronicznie ale zoptymalizujemy zapytania jeśli trzeba.
     await reset_demo_data(db, user.id)
     
     # 3. Generowanie tokena

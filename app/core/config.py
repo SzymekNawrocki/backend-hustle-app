@@ -37,10 +37,10 @@ class Settings(BaseSettings):
     DB_SSL: bool = True
 
     AUTH_COOKIE_NAME: str = "token"
-    # For localhost/dev keep False. For cross-site production typically True with SameSite=None.
-    AUTH_COOKIE_SECURE: bool = False
-    # Allowed values: "lax", "strict", "none"
-    AUTH_COOKIE_SAMESITE: str = "lax"
+    # MUST be True for cross-site production (Vercel -> Render)
+    AUTH_COOKIE_SECURE: bool = True
+    # MUST be "none" for cross-site cookies to be sent
+    AUTH_COOKIE_SAMESITE: str = "none"
     BACKEND_CORS_ORIGINS: list[str] = [
         "https://hustle-app-theta.vercel.app",
         "http://localhost:3000",
