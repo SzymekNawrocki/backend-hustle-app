@@ -1,13 +1,15 @@
 from datetime import timedelta
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
+from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.api import deps
 from app.core import security
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse, Token
 from app.services.demo_service import reset_demo_data
@@ -42,9 +44,12 @@ async def register(
     return db_obj
 
 @router.post("/login", response_model=Token)
+@limiter.limit("5/minute", key_func=get_remote_address)
 async def login(
+    request: Request,
     db: AsyncSession = Depends(deps.get_db),
-    form_data: OAuth2PasswordRequestForm = Depends() # OAuth2 compatibility
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    response: Response = None,
 ) -> Any:
     # Szukanie użytkownika po emailu (form_data.username)
     result = await db.execute(select(User).where(User.email == form_data.username))
@@ -65,6 +70,17 @@ async def login(
     token = security.create_access_token(
         user.id, expires_delta=access_token_expires
     )
+
+    if response is not None:
+        response.set_cookie(
+            key=settings.AUTH_COOKIE_NAME,
+            value=token,
+            httponly=True,
+            secure=settings.AUTH_COOKIE_SECURE,
+            samesite=settings.AUTH_COOKIE_SAMESITE,
+            max_age=int(access_token_expires.total_seconds()),
+            path="/",
+        )
     
     return {
         "access_token": token,
@@ -79,7 +95,8 @@ async def read_current_user(
 
 @router.post("/demo-login", response_model=Token)
 async def demo_login(
-    db: AsyncSession = Depends(deps.get_db)
+    db: AsyncSession = Depends(deps.get_db),
+    response: Response,
 ) -> Any:
     DEMO_EMAIL = "guest@demo.com"
     
@@ -106,8 +123,25 @@ async def demo_login(
     token = security.create_access_token(
         user.id, expires_delta=access_token_expires
     )
+
+    if response is not None:
+        response.set_cookie(
+            key=settings.AUTH_COOKIE_NAME,
+            value=token,
+            httponly=True,
+            secure=settings.AUTH_COOKIE_SECURE,
+            samesite=settings.AUTH_COOKIE_SAMESITE,
+            max_age=int(access_token_expires.total_seconds()),
+            path="/",
+        )
     
     return {
         "access_token": token,
         "token_type": "bearer",
-    }
+    }
+
+
+@router.post("/logout")
+async def logout(response: Response) -> Any:
+    response.delete_cookie(key=settings.AUTH_COOKIE_NAME, path="/")
+    return {"status": "ok"}

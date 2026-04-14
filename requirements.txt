@@ -1,8 +1,8 @@
 fastapi
 uvicorn[standard]
 sqlalchemy>=2.0.0
-asyncpg            
-alembic            
+asyncpg
+alembic
 python-multipart
 python-jose[cryptography]
 passlib[bcrypt]
@@ -10,5 +10,6 @@ python-dotenv
 pydantic-settings
 pydantic[email]
 groq
-langchain-groq     
-httpx              
+langchain-groq
+httpx
+slowapi

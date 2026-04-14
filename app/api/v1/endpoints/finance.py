@@ -1,10 +1,11 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api import deps
+from app.core.limiter import limiter
 from app.models.user import User
 from app.models.finance import Expense
 from app.schemas.finance import (
@@ -56,11 +57,12 @@ async def delete_expense(
     return expense
 
 @router.post("/hustle-input", response_model=ExpenseResponse)
+@limiter.limit("10/minute")
 async def create_hustle_expense(
-    *,
+    request: Request,
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
-    hustle_in: HustleInputRequest
+    hustle_in: HustleInputRequest = ...,
 ) -> Any:
     """
     AI-powered hustle input for quick expense tracking.

@@ -1,15 +1,19 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
 from app.db.base import Base
 from app.api.v1.api import api_router
 from app.core.config import settings
+from app.core.limiter import limiter
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
+
+app.state.limiter = limiter
 
 # Custom middleware to log origin for debugging
 @app.middleware("http")
@@ -19,6 +23,14 @@ async def add_process_time_header(request: Request, call_next):
         print(f"DEBUG: origin={origin} path={request.url.path}")
     response = await call_next(request)
     return response
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content={"detail": f"Za dużo requestów. Limit: {exc.detail}. Poczekaj chwilę i spróbuj ponownie."},
+        headers={"Access-Control-Allow-Origin": "*"},
+    )
 
 # Handle Faraday/CORS/Auth errors specifically
 @app.exception_handler(HTTPException)

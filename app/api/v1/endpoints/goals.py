@@ -1,11 +1,12 @@
 from datetime import datetime, date, timedelta
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api import deps
+from app.core.limiter import limiter
 from app.models.user import User
 from app.models.goal import Goal, Milestone, Task, Habit, GoalStatus
 from app.models.finance import Expense, ExpenseCategory
@@ -235,11 +236,12 @@ async def get_activity_history(
     return ActivityHistory(days=days)
 
 @router.post("/smart-create", response_model=GoalResponse)
+@limiter.limit("10/minute")
 async def smart_create_goal(
-    *,
+    request: Request,
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
-    input_data: SmartCreateInput
+    input_data: SmartCreateInput = ...,
 ) -> Any:
     """
     Generate a smart goal and milestones using AI based on an idea.

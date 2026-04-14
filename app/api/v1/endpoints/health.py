@@ -1,9 +1,10 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.api import deps
+from app.core.limiter import limiter
 from app.models.user import User
 from app.models.health import MealLog
 from app.schemas.health import MealLogResponse, MealLogAIRequest
@@ -13,11 +14,12 @@ from app.services.ai_service import ai_service
 router = APIRouter()
 
 @router.post("/log-meal-ai", response_model=MealLogResponse)
+@limiter.limit("10/minute")
 async def log_meal_ai(
-    *,
+    request: Request,
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
-    input_data: MealLogAIRequest
+    input_data: MealLogAIRequest = ...,
 ) -> Any:
     """
     Log a meal using natural language via AI analysis.
