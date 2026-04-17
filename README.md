@@ -1,68 +1,68 @@
 # HustleOS — Backend
 
-Backend aplikacji HustleOS: platforma do śledzenia celów, finansów osobistych i zdrowia z integracją AI.
+Backend for HustleOS: a personal productivity and finance tracking platform with AI integration.
 
 ## Stack
 
-- **FastAPI** — framework REST API (async)
-- **SQLAlchemy 2.0 + asyncpg** — ORM z pełną obsługą async
-- **PostgreSQL** — baza danych (Supabase / Neon)
-- **Alembic** — migracje schematu
-- **Groq API** (Llama 3.3-70b) — parsowanie AI
-- **slowapi** — rate limiting per-user
-- **Docker** — konteneryzacja (multi-stage build)
+- **FastAPI** — async REST API framework
+- **SQLAlchemy 2.0 + asyncpg** — async ORM
+- **PostgreSQL** — database (Supabase / Neon)
+- **Alembic** — schema migrations
+- **Groq API** (Llama 3.3-70b) — AI parsing
+- **slowapi** — per-user rate limiting
+- **Docker** — multi-stage containerization
 - **Render.com** — deployment
 
-## Funkcjonalności
+## Features
 
-### Autentykacja
-- Rejestracja i logowanie z JWT w httpOnly cookie
-- Demo login — konto gościa z resetem danych przy każdym logowaniu
+### Authentication
+- Registration and login with JWT stored in an httpOnly cookie
+- Demo login — guest account with data reset on every login
 
-### Cele (OKR)
-- Tworzenie celów z milestones i zadaniami
-- Smart-create — generowanie celu z krótkim opisem przez AI
-- Śledzenie nawyków (daily / weekly) ze streaks
-- Dashboard z podsumowaniem dnia i 7-dniową historią aktywności
+### Goals (OKR)
+- Create goals with milestones and tasks
+- Smart-create — generate a full goal from a short description using AI
+- Habit tracking (daily / weekly) with streaks
+- Dashboard with a daily summary and 7-day activity history
 
-### Finanse
-- Dodawanie wydatków przez AI (`/hustle-input`) — wystarczy napisać "wydałem 50 zł na Żappkę"
-- Kategorie: OPLATY, HUSTLE, LIFESTYLE, INCOME
-- Historia z paginacją
+### Finance
+- Add expenses via AI (`/hustle-input`) — just describe what you spent in plain text
+- Categories: OPLATY, HUSTLE, LIFESTYLE, INCOME
+- Paginated expense history
 
-### Zdrowie
-- Logowanie posiłków przez AI — opis w naturalnym języku → makra (kalorie, białko, węglowodany, tłuszcze)
-- Historia z paginacją
+### Health
+- Log meals via AI — natural language description → macros (calories, protein, carbs, fat)
+- Paginated meal history
 
-### Oferty pracy
-- Pipeline ofert z etapami: Wysłano → 1 etap → 2 etap → 3 etap → Umowa
+### Job offers
+- Job offer pipeline with stages: Wysłano → 1 etap → 2 etap → 3 etap → Umowa
 
-## Uruchomienie lokalnie
+## Running locally
 
 ```bash
-# 1. Sklonuj repozytorium
+# 1. Clone the repository
 git clone <repo-url>
 cd backend
 
-# 2. Utwórz środowisko wirtualne
+# 2. Create a virtual environment
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# 3. Zainstaluj zależności
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Skonfiguruj zmienne środowiskowe
+# 4. Configure environment variables
 cp .env.example .env
-# Uzupełnij DATABASE_URL, SECRET_KEY, GROQ_API_KEY
+# Fill in DATABASE_URL, SECRET_KEY, GROQ_API_KEY
 
-# 5. Uruchom migracje
+# 5. Run migrations
 alembic upgrade head
 
-# 6. Uruchom serwer
+# 6. Start the server
 uvicorn app.main:app --reload
 ```
 
-API dostępne pod `http://localhost:8000`. Dokumentacja Swagger: `http://localhost:8000/docs`.
+API available at `http://localhost:8000`. Swagger docs: `http://localhost:8000/docs`.
 
 ## Docker
 
@@ -71,47 +71,47 @@ docker build -t hustle-backend .
 docker run -p 8000:8000 --env-file .env hustle-backend
 ```
 
-## Zmienne środowiskowe
+## Environment variables
 
-| Zmienna | Opis | Wymagana |
+| Variable | Description | Required |
 |---|---|---|
-| `DATABASE_URL` | Connection string PostgreSQL | tak |
-| `SECRET_KEY` | Klucz JWT (min. 32 znaki) | tak |
-| `GROQ_API_KEY` | Klucz API Groq | tak |
-| `DB_SSL` | SSL dla bazy (true w produkcji) | nie |
-| `BACKEND_CORS_ORIGINS` | Dozwolone originy CORS | nie |
+| `DATABASE_URL` | PostgreSQL connection string | yes |
+| `SECRET_KEY` | JWT secret key (min. 32 chars) | yes |
+| `GROQ_API_KEY` | Groq API key | yes |
+| `DB_SSL` | SSL for database (true in production) | no |
+| `BACKEND_CORS_ORIGINS` | Allowed CORS origins | no |
 
-Szablon: `.env.example`
+Template: `.env.example`
 
-## Testy
+## Tests
 
 ```bash
 pytest
 ```
 
-## Migracje
+## Migrations
 
 ```bash
-# Nowa migracja
-alembic revision --autogenerate -m "opis zmian"
+# Create a new migration
+alembic revision --autogenerate -m "description"
 
-# Zastosuj migracje
+# Apply migrations
 alembic upgrade head
 
-# Rollback
+# Rollback one step
 alembic downgrade -1
 ```
 
-Nie modyfikuj plików migracji ręcznie.
+Do not modify migration files manually.
 
-## Struktura projektu
+## Project structure
 
 ```
 app/
-├── api/v1/endpoints/   # Endpointy (auth, goals, finance, health, offers)
-├── core/               # Konfiguracja, JWT, rate limiting
-├── db/                 # Sesja, typy, base class
-├── models/             # Modele SQLAlchemy
-├── schemas/            # Schematy Pydantic
-└── services/           # Logika biznesowa, integracja AI
+├── api/v1/endpoints/   # Routers (auth, goals, finance, health, offers)
+├── core/               # Config, JWT, rate limiting
+├── db/                 # Session, types, base class
+├── models/             # SQLAlchemy models
+├── schemas/            # Pydantic schemas
+└── services/           # Business logic, AI integration
 ```
