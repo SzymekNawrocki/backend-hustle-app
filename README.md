@@ -35,7 +35,7 @@ Backend for HustleOS: a personal productivity and finance tracking platform with
 - Paginated meal history
 
 ### Job offers
-- Job offer pipeline with stages: Wysłano → 1 etap → 2 etap → 3 etap → Umowa
+- Job offer pipeline with stages
 
 ## Running locally
 
