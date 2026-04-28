@@ -1,9 +1,9 @@
-from pydantic import field_validator
+﻿from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "HustleOS"
+    PROJECT_NAME: str = "Hustle App"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
 

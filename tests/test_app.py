@@ -1,4 +1,4 @@
-"""
+﻿"""
 Smoke testy aplikacji.
 
 Nie testują logiki biznesowej ani bazy danych — sprawdzają, że:
@@ -25,12 +25,12 @@ client = TestClient(app, raise_server_exceptions=False)
 def test_app_instance_exists():
     """Aplikacja FastAPI tworzy się bez błędów."""
     assert app is not None
-    assert app.title == "HustleOS"
+    assert app.title == "Hustle App"
 
 
 def test_settings_loaded():
     """Settings wczytuje się i waliduje SECRET_KEY."""
-    assert settings.PROJECT_NAME == "HustleOS"
+    assert settings.PROJECT_NAME == "Hustle App"
     assert len(settings.SECRET_KEY) >= 32
     assert settings.API_V1_STR == "/api/v1"
 
@@ -97,4 +97,4 @@ def test_openapi_schema_available():
     response = client.get(f"{settings.API_V1_STR}/openapi.json")
     assert response.status_code == 200
     schema = response.json()
-    assert schema["info"]["title"] == "HustleOS"
+    assert schema["info"]["title"] == "Hustle App"

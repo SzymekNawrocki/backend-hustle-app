@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 from app.db.session import engine
 from app.core import security
 from app.core.config import settings
@@ -33,7 +33,7 @@ def check_config():
     print(f"SUCCESS: Async DB URL: {settings.ASYNC_DATABASE_URL[:30]}...")
 
 async def main():
-    print("--- HustleOS Verification ---")
+    print("--- Hustle App Verification ---")
     check_config()
     check_security()
     await check_db_connection()

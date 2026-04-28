@@ -1,6 +1,6 @@
-# HustleOS — Backend
+﻿# Hustle App — Backend
 
-Backend for HustleOS: a personal productivity and finance tracking platform with AI integration.
+Backend for Hustle App: a personal productivity and finance tracking platform with AI integration.
 
 ## Stack
 
