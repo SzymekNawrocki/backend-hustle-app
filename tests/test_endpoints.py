@@ -144,6 +144,8 @@ PROTECTED_GET_ROUTES = [
     f"{BASE}/goals/activity/history",
     f"{BASE}/health/meals",
     f"{BASE}/offers",
+    f"{BASE}/export/expenses.csv",
+    f"{BASE}/export/meals.csv",
 ]
 
 
