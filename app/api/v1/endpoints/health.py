@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
+from math import ceil
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.api import deps
 from app.core.limiter import limiter
@@ -10,6 +11,7 @@ from app.core.cache import invalidate_dashboard
 from app.models.user import User
 from app.models.health import MealLog
 from app.schemas.health import MealLogResponse, MealLogAIRequest
+from app.schemas.pagination import PaginatedResponse
 from app.schemas.ai import MealAIResponse
 from app.services.ai_service import ai_service
 
@@ -78,20 +80,34 @@ async def delete_meal(
     await invalidate_dashboard(current_user.id)
     return meal
 
-@router.get("/meals", response_model=List[MealLogResponse])
+@router.get("/meals", response_model=PaginatedResponse[MealLogResponse])
 async def read_meals(
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
-    skip: int = 0,
-    limit: int = 100
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
 ) -> Any:
-    """
-    Retrieve meal logs for current user.
-    """
+    offset = (page - 1) * limit
+
+    count_result = await db.execute(
+        select(func.count(MealLog.id)).where(
+            MealLog.user_id == current_user.id,
+            MealLog.deleted_at.is_(None),
+        )
+    )
+    total = count_result.scalar() or 0
+
     result = await db.execute(
         select(MealLog)
         .where(MealLog.user_id == current_user.id, MealLog.deleted_at.is_(None))
-        .offset(skip)
+        .order_by(MealLog.id.desc())
+        .offset(offset)
         .limit(limit)
     )
-    return result.scalars().all()
+
+    return {
+        "items": result.scalars().all(),
+        "total": total,
+        "page": page,
+        "pages": ceil(total / limit) if total > 0 else 1,
+    }
