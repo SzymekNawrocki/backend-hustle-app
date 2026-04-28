@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     # True for Supabase/production (requires SSL). False for local postgres.
     DB_SSL: bool = True
 
+    SENTRY_DSN: Optional[str] = None
+
     AUTH_COOKIE_NAME: str = "token"
     # MUST be True for cross-site production (Vercel -> Render)
     AUTH_COOKIE_SECURE: bool = True
