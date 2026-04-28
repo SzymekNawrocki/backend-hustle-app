@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, Field
 
 class MealLogBase(BaseModel):
     description: str
@@ -30,4 +30,4 @@ class MealLogResponse(MealLogBase):
     model_config = ConfigDict(from_attributes=True)
 
 class MealLogAIRequest(BaseModel):
-    text: str
+    text: str = Field(max_length=1000)

@@ -20,7 +20,7 @@ class Expense(Base):
     amount: Mapped[float] = mapped_column(Float, nullable=False)
     category: Mapped[ExpenseCategory] = mapped_column(Enum(ExpenseCategory), nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=False)
-    timestamp: Mapped[datetime] = mapped_column(NaiveDateTime, default=datetime.utcnow)
-    
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(NaiveDateTime, default=datetime.utcnow, index=True)
+
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     user: Mapped["User"] = relationship("User", back_populates="expenses")

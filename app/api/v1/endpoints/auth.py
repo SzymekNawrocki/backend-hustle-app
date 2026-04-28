@@ -93,7 +93,9 @@ async def read_current_user(
     return current_user
 
 @router.post("/demo-login", response_model=Token)
+@limiter.limit("3/minute", key_func=get_remote_address)
 async def demo_login(
+    request: Request,
     response: Response,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(deps.get_db),

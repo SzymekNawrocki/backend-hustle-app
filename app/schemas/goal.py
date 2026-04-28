@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, computed_field, Field
 from app.models.goal import GoalCategory, GoalStatus, HabitFrequency
 from app.schemas.finance import ExpenseResponse
 from app.schemas.health import MealLogResponse
@@ -100,7 +100,7 @@ class DashboardToday(BaseModel):
 
 # Smart Create Schema
 class SmartCreateInput(BaseModel):
-    idea: str
+    idea: str = Field(max_length=500)
 
 # Activity History
 class ActivityDay(BaseModel):

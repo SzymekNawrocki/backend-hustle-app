@@ -10,11 +10,14 @@ python-dotenv
 pydantic-settings
 pydantic[email]
 groq
-langchain-groq
 httpx
 slowapi
 
 # Dev / CI
 ruff
+mypy
+bandit
+pip-audit
 pytest
 pytest-asyncio
+pytest-cov

@@ -38,15 +38,10 @@ async def get_current_user(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
         token_data = TokenPayload(**payload)
-    except (JWTError, ValueError) as e:
-        error_type = type(e).__name__
-        print(f"DEBUG: JWT Validation Error: Type={error_type}, Error={str(e)}")
-        # Check if it looks like a JWT (3 parts)
-        parts = token.split('.')
-        print(f"DEBUG: Token segmented count: {len(parts)}")
+    except (JWTError, ValueError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Could not validate credentials: {error_type}",
+            detail="Could not validate credentials",
         )
 
     

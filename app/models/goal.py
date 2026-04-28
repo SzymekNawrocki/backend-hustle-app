@@ -28,7 +28,7 @@ class Goal(Base):
     target_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     status: Mapped[GoalStatus] = mapped_column(Enum(GoalStatus), default=GoalStatus.IN_PROGRESS)
     
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     user: Mapped["User"] = relationship("User", back_populates="goals")
     
     milestones: Mapped[List["Milestone"]] = relationship(
@@ -51,7 +51,7 @@ class Task(Base):
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     due_date: Mapped[Optional[datetime]] = mapped_column(NaiveDateTime, nullable=True)
     
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     user: Mapped["User"] = relationship("User", back_populates="tasks")
     
     goal_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("goal.id"), nullable=True)
@@ -67,5 +67,5 @@ class Habit(Base):
     frequency: Mapped[HabitFrequency] = mapped_column(Enum(HabitFrequency), default=HabitFrequency.DAILY)
     streak: Mapped[int] = mapped_column(Integer, default=0)
     
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     user: Mapped["User"] = relationship("User", back_populates="habits")

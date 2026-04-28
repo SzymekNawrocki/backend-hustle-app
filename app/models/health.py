@@ -15,8 +15,8 @@ class MealLog(Base):
     protein: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     carbs: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     fat: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(NaiveDateTime, default=datetime.utcnow)
-    
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(NaiveDateTime, default=datetime.utcnow, index=True)
+
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     user: Mapped["User"] = relationship("User", back_populates="meals")
 

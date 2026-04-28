@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, Field
 from app.models.finance import ExpenseCategory
 
 # Expense Schemas
@@ -50,5 +50,5 @@ class ExpenseUpdate(BaseModel):
 
 
 class HustleInputRequest(BaseModel):
-    text: str
+    text: str = Field(max_length=1000)
     forced_category: Optional[str] = None
