@@ -1,7 +1,9 @@
+from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import String, Boolean, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base_class import Base
+from app.db.types import NaiveDateTime
 
 if TYPE_CHECKING:
     from app.models.goal import Goal, Task, Habit
@@ -16,6 +18,8 @@ class User(Base):
     full_name: Mapped[str] = mapped_column(String, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
+    refresh_token_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    refresh_token_expires_at: Mapped[Optional[datetime]] = mapped_column(NaiveDateTime, nullable=True)
 
     goals: Mapped[List["Goal"]] = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
     tasks: Mapped[List["Task"]] = relationship("Task", back_populates="user", cascade="all, delete-orphan")

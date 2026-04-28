@@ -5,7 +5,7 @@ from passlib.context import CryptContext
 from app.core.config import settings
 
 import hashlib
-import base64
+import secrets
 
 # Using PBKDF2-SHA256 as primary to avoid Bcrypt's 72-byte limit.
 # Bcrypt is kept for compatibility with any existing hashes.
@@ -16,6 +16,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
+
+def create_refresh_token() -> str:
+    """Generate a cryptographically secure random refresh token (64 hex chars)."""
+    return secrets.token_hex(32)
+
+def hash_token(token: str) -> str:
+    """SHA-256 hash of a token for safe storage in DB."""
+    return hashlib.sha256(token.encode()).hexdigest()
 
 def create_access_token(subject: Union[str, Any], expires_delta: timedelta = None) -> str:
     if expires_delta:
