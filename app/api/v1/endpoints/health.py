@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,14 +63,15 @@ async def delete_meal(
     result = await db.execute(
         select(MealLog).where(
             MealLog.id == meal_id,
-            MealLog.user_id == current_user.id
+            MealLog.user_id == current_user.id,
+            MealLog.deleted_at.is_(None),
         )
     )
     meal = result.scalars().first()
     if not meal:
         raise HTTPException(status_code=404, detail="Meal not found")
 
-    await db.delete(meal)
+    meal.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.commit()
     return meal
 
@@ -85,7 +87,7 @@ async def read_meals(
     """
     result = await db.execute(
         select(MealLog)
-        .where(MealLog.user_id == current_user.id)
+        .where(MealLog.user_id == current_user.id, MealLog.deleted_at.is_(None))
         .offset(skip)
         .limit(limit)
     )

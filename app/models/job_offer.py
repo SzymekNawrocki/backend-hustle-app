@@ -1,10 +1,12 @@
 import enum
-from typing import TYPE_CHECKING
+from datetime import datetime
+from typing import Optional, TYPE_CHECKING
 from sqlalchemy import String, Integer, ForeignKey
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base
+from app.db.types import NaiveDateTime
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -33,6 +35,8 @@ class JobOffer(Base):
     )
     url: Mapped[str] = mapped_column(String, nullable=False)
     notes: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(NaiveDateTime, nullable=True)
 
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
     user: Mapped["User"] = relationship("User", back_populates="job_offers")

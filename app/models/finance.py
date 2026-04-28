@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
-from typing import List, Optional, TYPE_CHECKING
-from sqlalchemy import String, Integer, ForeignKey, DateTime, Enum, Float, Numeric
+from typing import Optional, TYPE_CHECKING
+from sqlalchemy import String, Integer, ForeignKey, Enum, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base_class import Base
 
@@ -21,6 +21,7 @@ class Expense(Base):
     category: Mapped[ExpenseCategory] = mapped_column(Enum(ExpenseCategory), nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(NaiveDateTime, default=datetime.utcnow, index=True)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(NaiveDateTime, nullable=True)
 
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     user: Mapped["User"] = relationship("User", back_populates="expenses")

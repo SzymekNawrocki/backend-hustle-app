@@ -1,5 +1,6 @@
+from datetime import datetime, timezone
 from math import ceil
-from typing import Any, List
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
@@ -39,13 +40,16 @@ async def read_offers(
     offset = (page - 1) * limit
 
     count_result = await db.execute(
-        select(func.count(JobOffer.id)).where(JobOffer.user_id == current_user.id)
+        select(func.count(JobOffer.id)).where(
+            JobOffer.user_id == current_user.id,
+            JobOffer.deleted_at.is_(None),
+        )
     )
     total = count_result.scalar() or 0
 
     result = await db.execute(
         select(JobOffer)
-        .where(JobOffer.user_id == current_user.id)
+        .where(JobOffer.user_id == current_user.id, JobOffer.deleted_at.is_(None))
         .order_by(JobOffer.id.desc())
         .offset(offset)
         .limit(limit)
@@ -67,13 +71,17 @@ async def delete_offer(
     offer_id: int,
 ) -> Any:
     result = await db.execute(
-        select(JobOffer).where(JobOffer.id == offer_id, JobOffer.user_id == current_user.id)
+        select(JobOffer).where(
+            JobOffer.id == offer_id,
+            JobOffer.user_id == current_user.id,
+            JobOffer.deleted_at.is_(None),
+        )
     )
     offer = result.scalars().first()
     if not offer:
         raise HTTPException(status_code=404, detail="Offer not found")
 
-    await db.delete(offer)
+    offer.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.commit()
     return offer
 
@@ -87,7 +95,11 @@ async def update_offer(
     offer_in: JobOfferUpdate,
 ) -> Any:
     result = await db.execute(
-        select(JobOffer).where(JobOffer.id == offer_id, JobOffer.user_id == current_user.id)
+        select(JobOffer).where(
+            JobOffer.id == offer_id,
+            JobOffer.user_id == current_user.id,
+            JobOffer.deleted_at.is_(None),
+        )
     )
     offer = result.scalars().first()
     if not offer:

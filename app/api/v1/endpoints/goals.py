@@ -1,4 +1,4 @@
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from math import ceil
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -77,13 +77,16 @@ async def read_goals(
     offset = (page - 1) * limit
 
     count_result = await db.execute(
-        select(func.count(Goal.id)).where(Goal.user_id == current_user.id)
+        select(func.count(Goal.id)).where(
+            Goal.user_id == current_user.id,
+            Goal.deleted_at.is_(None),
+        )
     )
     total = count_result.scalar() or 0
 
     result = await db.execute(
         select(Goal)
-        .where(Goal.user_id == current_user.id)
+        .where(Goal.user_id == current_user.id, Goal.deleted_at.is_(None))
         .offset(offset)
         .limit(limit)
         .options(
@@ -117,7 +120,8 @@ async def get_dashboard_today(
         select(Task).where(
             Task.user_id == current_user.id,
             Task.due_date >= today_start,
-            Task.due_date <= today_end
+            Task.due_date <= today_end,
+            Task.deleted_at.is_(None),
         )
     )
     tasks = tasks_result.scalars().all()
@@ -135,7 +139,7 @@ async def get_dashboard_today(
                 (Expense.category == ExpenseCategory.INCOME, Expense.amount),
                 else_=-Expense.amount
             )
-        )).where(Expense.user_id == current_user.id)
+        )).where(Expense.user_id == current_user.id, Expense.deleted_at.is_(None))
     )
     total_balance = balance_result.scalar() or 0.0
 
@@ -144,7 +148,8 @@ async def get_dashboard_today(
         select(MealLog).where(
             MealLog.user_id == current_user.id,
             MealLog.created_at >= today_start,
-            MealLog.created_at <= today_end
+            MealLog.created_at <= today_end,
+            MealLog.deleted_at.is_(None),
         )
     )
     today_meals = today_meals_result.scalars().all()
@@ -154,14 +159,16 @@ async def get_dashboard_today(
     goals_count_result = await db.execute(
         select(func.count(Goal.id)).where(
             Goal.user_id == current_user.id,
-            Goal.status == GoalStatus.IN_PROGRESS
+            Goal.status == GoalStatus.IN_PROGRESS,
+            Goal.deleted_at.is_(None),
         )
     )
     active_goals_count = goals_count_result.scalar() or 0
 
     # Recent Job Offers (Last 5)
     offers_result = await db.execute(
-        select(JobOffer).where(JobOffer.user_id == current_user.id)
+        select(JobOffer)
+        .where(JobOffer.user_id == current_user.id, JobOffer.deleted_at.is_(None))
         .order_by(desc(JobOffer.id))
         .limit(5)
     )
@@ -169,7 +176,8 @@ async def get_dashboard_today(
 
     # Recent Expenses (Last 5)
     recent_expenses_result = await db.execute(
-        select(Expense).where(Expense.user_id == current_user.id)
+        select(Expense)
+        .where(Expense.user_id == current_user.id, Expense.deleted_at.is_(None))
         .order_by(desc(Expense.timestamp))
         .limit(5)
     )
@@ -177,7 +185,8 @@ async def get_dashboard_today(
 
     # Latest Goal
     latest_goal_result = await db.execute(
-        select(Goal).where(Goal.user_id == current_user.id)
+        select(Goal)
+        .where(Goal.user_id == current_user.id, Goal.deleted_at.is_(None))
         .order_by(desc(Goal.id))
         .limit(1)
         .options(selectinload(Goal.milestones), selectinload(Goal.tasks))
@@ -211,7 +220,8 @@ async def get_activity_history(
     goals_count_result = await db.execute(
         select(func.count(Goal.id)).where(
             Goal.user_id == current_user.id,
-            Goal.status == GoalStatus.IN_PROGRESS
+            Goal.status == GoalStatus.IN_PROGRESS,
+            Goal.deleted_at.is_(None),
         )
     )
     active_goals_count = goals_count_result.scalar() or 0
@@ -227,7 +237,11 @@ async def get_activity_history(
                 )
             ).label("balance")
         )
-        .where(Expense.user_id == current_user.id, Expense.timestamp >= since)
+        .where(
+            Expense.user_id == current_user.id,
+            Expense.timestamp >= since,
+            Expense.deleted_at.is_(None),
+        )
         .group_by(cast(Expense.timestamp, SQLDate))
     )
     finance_map = {row.day: float(row.balance) for row in finance_rows}
@@ -238,7 +252,11 @@ async def get_activity_history(
             cast(MealLog.created_at, SQLDate).label("day"),
             func.coalesce(func.sum(MealLog.calories), 0.0).label("calories")
         )
-        .where(MealLog.user_id == current_user.id, MealLog.created_at >= since)
+        .where(
+            MealLog.user_id == current_user.id,
+            MealLog.created_at >= since,
+            MealLog.deleted_at.is_(None),
+        )
         .group_by(cast(MealLog.created_at, SQLDate))
     )
     health_map = {row.day: float(row.calories) for row in health_rows}
@@ -333,7 +351,7 @@ async def read_goal(
     """
     result = await db.execute(
         select(Goal)
-        .where(Goal.id == goal_id, Goal.user_id == current_user.id)
+        .where(Goal.id == goal_id, Goal.user_id == current_user.id, Goal.deleted_at.is_(None))
         .options(
             selectinload(Goal.milestones),
             selectinload(Goal.tasks)
@@ -358,7 +376,7 @@ async def update_goal(
     """
     result = await db.execute(
         select(Goal)
-        .where(Goal.id == goal_id, Goal.user_id == current_user.id)
+        .where(Goal.id == goal_id, Goal.user_id == current_user.id, Goal.deleted_at.is_(None))
         .options(selectinload(Goal.milestones))
     )
     goal = result.scalars().first()
@@ -396,10 +414,9 @@ async def delete_goal(
     """
     Delete a goal.
     """
-    # Load data needed for response BEFORE deletion
     result = await db.execute(
         select(Goal)
-        .where(Goal.id == goal_id, Goal.user_id == current_user.id)
+        .where(Goal.id == goal_id, Goal.user_id == current_user.id, Goal.deleted_at.is_(None))
         .options(
             selectinload(Goal.milestones),
             selectinload(Goal.tasks)
@@ -408,8 +425,11 @@ async def delete_goal(
     goal_to_return = result.scalars().first()
     if not goal_to_return:
         raise HTTPException(status_code=404, detail="Goal not found")
-    
-    await db.delete(goal_to_return)
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    goal_to_return.deleted_at = now
+    for task in goal_to_return.tasks:
+        task.deleted_at = now
     await db.commit()
     return goal_to_return
 @router.post("/tasks/{task_id}/toggle", response_model=TaskResponse)
@@ -423,7 +443,11 @@ async def toggle_task(
     Toggle task completion status.
     """
     result = await db.execute(
-        select(Task).where(Task.id == task_id, Task.user_id == current_user.id)
+        select(Task).where(
+            Task.id == task_id,
+            Task.user_id == current_user.id,
+            Task.deleted_at.is_(None),
+        )
     )
     task = result.scalars().first()
     if not task:

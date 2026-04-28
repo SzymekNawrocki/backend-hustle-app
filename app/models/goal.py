@@ -1,7 +1,7 @@
 import enum
 from datetime import date, datetime
 from typing import List, Optional, TYPE_CHECKING
-from sqlalchemy import String, Boolean, Integer, ForeignKey, Date, DateTime, Enum, Float
+from sqlalchemy import String, Boolean, Integer, ForeignKey, Date, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base_class import Base
 
@@ -27,7 +27,8 @@ class Goal(Base):
     category: Mapped[GoalCategory] = mapped_column(Enum(GoalCategory), default=GoalCategory.PERSONAL)
     target_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     status: Mapped[GoalStatus] = mapped_column(Enum(GoalStatus), default=GoalStatus.IN_PROGRESS)
-    
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(NaiveDateTime, nullable=True)
+
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     user: Mapped["User"] = relationship("User", back_populates="goals")
     
@@ -50,7 +51,8 @@ class Task(Base):
     description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     due_date: Mapped[Optional[datetime]] = mapped_column(NaiveDateTime, nullable=True)
-    
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(NaiveDateTime, nullable=True)
+
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     user: Mapped["User"] = relationship("User", back_populates="tasks")
     

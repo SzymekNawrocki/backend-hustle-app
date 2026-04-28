@@ -1,5 +1,6 @@
+from datetime import datetime, timezone
 from math import ceil
-from typing import Any, List
+from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select
@@ -29,13 +30,16 @@ async def read_expenses(
     offset = (page - 1) * limit
 
     count_result = await db.execute(
-        select(func.count(Expense.id)).where(Expense.user_id == current_user.id)
+        select(func.count(Expense.id)).where(
+            Expense.user_id == current_user.id,
+            Expense.deleted_at.is_(None),
+        )
     )
     total = count_result.scalar() or 0
 
     result = await db.execute(
         select(Expense)
-        .where(Expense.user_id == current_user.id)
+        .where(Expense.user_id == current_user.id, Expense.deleted_at.is_(None))
         .order_by(Expense.timestamp.desc())
         .offset(offset)
         .limit(limit)
@@ -57,7 +61,11 @@ async def update_expense(
     expense_in: ExpenseUpdate,
 ) -> Any:
     result = await db.execute(
-        select(Expense).where(Expense.id == expense_id, Expense.user_id == current_user.id)
+        select(Expense).where(
+            Expense.id == expense_id,
+            Expense.user_id == current_user.id,
+            Expense.deleted_at.is_(None),
+        )
     )
     expense = result.scalars().first()
     if not expense:
@@ -82,14 +90,17 @@ async def delete_expense(
     Delete an expense.
     """
     result = await db.execute(
-        select(Expense)
-        .where(Expense.id == expense_id, Expense.user_id == current_user.id)
+        select(Expense).where(
+            Expense.id == expense_id,
+            Expense.user_id == current_user.id,
+            Expense.deleted_at.is_(None),
+        )
     )
     expense = result.scalars().first()
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
-    
-    await db.delete(expense)
+
+    expense.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.commit()
     return expense
 
