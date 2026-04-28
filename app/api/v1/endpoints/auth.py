@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.core.limiter import limiter
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse, Token
-from app.services.demo_service import reset_demo_data
+from app.services.demo_service import reset_demo_data_bg
 
 
 router = APIRouter()
@@ -181,13 +181,12 @@ async def demo_login(
         await db.commit()
         await db.refresh(user)
 
-    await reset_demo_data(db, user.id)
-
     access_token = security.create_access_token(
         user.id, expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     raw_refresh = await _attach_refresh_token(db, user)
     _set_auth_cookies(response, access_token, raw_refresh)
+    background_tasks.add_task(reset_demo_data_bg, user.id)
 
     return {"access_token": access_token, "token_type": "bearer"}
 

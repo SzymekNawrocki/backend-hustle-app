@@ -5,6 +5,14 @@ from app.models.user import User
 from app.models.goal import Goal, Milestone, Task, Habit, HabitFrequency, GoalCategory, GoalStatus
 from app.models.finance import Expense, ExpenseCategory
 from app.models.health import MealLog
+from app.db.session import AsyncSessionLocal
+
+
+async def reset_demo_data_bg(user_id: int) -> None:
+    """Background-task wrapper — opens its own session so it can run after the response is sent."""
+    async with AsyncSessionLocal() as db:
+        await reset_demo_data(db, user_id)
+
 
 async def reset_demo_data(db: AsyncSession, user_id: int):
     # 1. Delete old data
