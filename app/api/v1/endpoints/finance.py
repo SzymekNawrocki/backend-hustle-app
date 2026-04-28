@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 
 from app.api import deps
 from app.core.limiter import limiter
+from app.core.cache import invalidate_dashboard
 from app.schemas.pagination import PaginatedResponse
 from app.models.user import User
 from app.models.finance import Expense
@@ -76,6 +77,7 @@ async def update_expense(
 
     await db.commit()
     await db.refresh(expense)
+    await invalidate_dashboard(current_user.id)
     return expense
 
 
@@ -102,6 +104,7 @@ async def delete_expense(
 
     expense.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.commit()
+    await invalidate_dashboard(current_user.id)
     return expense
 
 @router.post("/hustle-input", response_model=ExpenseResponse)
@@ -143,4 +146,5 @@ async def create_hustle_expense(
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
+    await invalidate_dashboard(current_user.id)
     return db_obj

@@ -22,6 +22,7 @@ from app.schemas.goal import (
 )
 from app.schemas.ai import OKRAIResponse
 from app.services.ai_service import ai_service
+from app.core.cache import cache, dashboard_key, activity_key, invalidate_dashboard
 
 router = APIRouter()
 
@@ -57,6 +58,7 @@ async def create_goal(
             db.add(db_milestone)
     
     await db.commit()
+    await invalidate_dashboard(current_user.id)
     # Reload with milestones using the local ID
     result = await db.execute(
         select(Goal).where(Goal.id == obj_id).options(selectinload(Goal.milestones))
@@ -112,6 +114,10 @@ async def get_dashboard_today(
     """
     Get dashboard summary including today's tasks/meals and recent activity.
     """
+    cached = await cache.get(dashboard_key(current_user.id))
+    if cached is not None:
+        return cached
+
     today_start = datetime.combine(date.today(), datetime.min.time())
     today_end = datetime.combine(date.today(), datetime.max.time())
     
@@ -193,7 +199,7 @@ async def get_dashboard_today(
     )
     latest_goal = latest_goal_result.scalars().first()
     
-    return {
+    dashboard = DashboardToday.model_validate({
         "tasks": tasks,
         "habits": habits,
         "finance_balance": total_balance,
@@ -202,8 +208,10 @@ async def get_dashboard_today(
         "recent_offers": recent_offers,
         "today_meals": today_meals,
         "recent_expenses": recent_expenses,
-        "latest_goal": latest_goal
-    }
+        "latest_goal": latest_goal,
+    })
+    await cache.set(dashboard_key(current_user.id), dashboard, ttl=30)
+    return dashboard
 
 @router.get("/activity/history", response_model=ActivityHistory)
 async def get_activity_history(
@@ -213,6 +221,10 @@ async def get_activity_history(
     """
     Get 7-day activity history for the dashboard chart.
     """
+    cached = await cache.get(activity_key(current_user.id))
+    if cached is not None:
+        return cached
+
     seven_days_ago = date.today() - timedelta(days=6)
     since = datetime.combine(seven_days_ago, datetime.min.time())
 
@@ -271,7 +283,9 @@ async def get_activity_history(
         for i in range(6, -1, -1)
     ]
 
-    return ActivityHistory(days=days)
+    activity = ActivityHistory(days=days)
+    await cache.set(activity_key(current_user.id), activity, ttl=60)
+    return activity
 
 @router.post("/smart-create", response_model=GoalResponse)
 @limiter.limit("10/minute")
@@ -391,7 +405,8 @@ async def update_goal(
     await db.flush()
     obj_id = goal.id
     await db.commit()
-    
+    await invalidate_dashboard(current_user.id)
+
     # Reload with relationships
     result = await db.execute(
         select(Goal)
@@ -431,6 +446,7 @@ async def delete_goal(
     for task in goal_to_return.tasks:
         task.deleted_at = now
     await db.commit()
+    await invalidate_dashboard(current_user.id)
     return goal_to_return
 @router.post("/tasks/{task_id}/toggle", response_model=TaskResponse)
 async def toggle_task(
@@ -457,6 +473,7 @@ async def toggle_task(
     db.add(task)
     await db.commit()
     await db.refresh(task)
+    await invalidate_dashboard(current_user.id)
     return task
 
 @router.post("/milestones/{milestone_id}/toggle", response_model=MilestoneResponse)
@@ -483,4 +500,5 @@ async def toggle_milestone(
     db.add(milestone)
     await db.commit()
     await db.refresh(milestone)
+    await invalidate_dashboard(current_user.id)
     return milestone

@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from app.api import deps
 from app.core.limiter import limiter
+from app.core.cache import invalidate_dashboard
 from app.models.user import User
 from app.models.health import MealLog
 from app.schemas.health import MealLogResponse, MealLogAIRequest
@@ -50,6 +51,7 @@ async def log_meal_ai(
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
+    await invalidate_dashboard(current_user.id)
     return db_obj
 
 
@@ -73,6 +75,7 @@ async def delete_meal(
 
     meal.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.commit()
+    await invalidate_dashboard(current_user.id)
     return meal
 
 @router.get("/meals", response_model=List[MealLogResponse])

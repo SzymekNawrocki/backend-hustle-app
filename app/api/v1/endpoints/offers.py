@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
+from app.core.cache import invalidate_dashboard
 from app.models.user import User
 from app.models.job_offer import JobOffer
 from app.schemas.offers import JobOfferCreate, JobOfferResponse, JobOfferUpdate
@@ -26,6 +27,7 @@ async def create_offer(
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
+    await invalidate_dashboard(current_user.id)
     return db_obj
 
 
@@ -83,6 +85,7 @@ async def delete_offer(
 
     offer.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.commit()
+    await invalidate_dashboard(current_user.id)
     return offer
 
 
@@ -111,4 +114,5 @@ async def update_offer(
 
     await db.commit()
     await db.refresh(offer)
+    await invalidate_dashboard(current_user.id)
     return offer
