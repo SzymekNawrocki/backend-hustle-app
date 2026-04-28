@@ -138,6 +138,7 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    sentry_sdk.capture_exception(exc)
     _log({
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "request_id": getattr(request.state, "request_id", None),
