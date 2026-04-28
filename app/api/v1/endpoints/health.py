@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from math import ceil
-from typing import Any, List
+from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select
@@ -29,19 +29,19 @@ async def log_meal_ai(
     Log a meal using natural language via AI analysis.
     """
     ai_data = await ai_service.parse_meal(input_data.text)
-    
+
     if "error" in ai_data:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=ai_data.get("details", "AI Analysis failed")
         )
-    
+
     # Validate with Pydantic
     try:
         nutrition = MealAIResponse(**ai_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Invalid AI output: {e}")
-    
+
     db_obj = MealLog(
         description=input_data.text,
         calories=nutrition.calories,

@@ -31,7 +31,7 @@ class Goal(Base):
 
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     user: Mapped["User"] = relationship("User", back_populates="goals")
-    
+
     milestones: Mapped[List["Milestone"]] = relationship(
         "Milestone", back_populates="goal", cascade="all, delete-orphan"
     )
@@ -41,7 +41,7 @@ class Milestone(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
-    
+
     goal_id: Mapped[int] = mapped_column(Integer, ForeignKey("goal.id"), nullable=False)
     goal: Mapped["Goal"] = relationship("Goal", back_populates="milestones")
 
@@ -55,7 +55,7 @@ class Task(Base):
 
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     user: Mapped["User"] = relationship("User", back_populates="tasks")
-    
+
     goal_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("goal.id"), nullable=True)
     goal: Mapped[Optional["Goal"]] = relationship("Goal", back_populates="tasks")
 
@@ -68,6 +68,6 @@ class Habit(Base):
     title: Mapped[str] = mapped_column(String, index=True, nullable=False)
     frequency: Mapped[HabitFrequency] = mapped_column(Enum(HabitFrequency), default=HabitFrequency.DAILY)
     streak: Mapped[int] = mapped_column(Integer, default=0)
-    
+
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     user: Mapped["User"] = relationship("User", back_populates="habits")

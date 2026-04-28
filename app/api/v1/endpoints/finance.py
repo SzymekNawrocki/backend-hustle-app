@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from math import ceil
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select
 
@@ -120,22 +120,22 @@ async def create_hustle_expense(
     """
     # Use AI to parse the input
     parsed_data = await ai_service.parse_hustle_input(hustle_in.text)
-    
+
     if "error" in parsed_data:
         raise HTTPException(status_code=400, detail=f"Failed to parse input: {parsed_data['error']}")
-    
+
     # Validate parsed data
     amount = parsed_data.get("amount")
     category = hustle_in.forced_category or parsed_data.get("category")
     description = parsed_data.get("description")
-    
+
     # Handle missing amount specifically
     if amount is None:
         raise HTTPException(status_code=400, detail="Couldn't find the amount in your text. Example: '50 PLN for pizza'")
 
     if category is None or description is None:
         raise HTTPException(status_code=400, detail="AI couldn't categorize the expense reliably.")
-    
+
     # Save to database
     db_obj = Expense(
         amount=float(amount),

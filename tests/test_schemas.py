@@ -113,7 +113,7 @@ def test_expense_update_all_fields_optional():
 # ---------------------------------------------------------------------------
 
 def test_settings_rejects_short_secret_key():
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         Settings(
             DATABASE_URL="postgresql://test:test@localhost/test",
             SECRET_KEY="tooshort",

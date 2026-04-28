@@ -9,7 +9,6 @@ from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.user import TokenPayload
-from app.core import security
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login",
@@ -44,14 +43,14 @@ async def get_current_user(
             detail="Could not validate credentials",
         )
 
-    
+
     result = await db.execute(select(User).where(User.id == int(token_data.sub)))
 
     user = result.scalars().first()
-    
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
-    
+
     return user

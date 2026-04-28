@@ -17,7 +17,7 @@ class MilestoneCreate(MilestoneBase):
 class MilestoneResponse(MilestoneBase):
     id: int
     goal_id: int
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 # Task Schemas
@@ -34,7 +34,7 @@ class TaskCreate(TaskBase):
 class TaskResponse(TaskBase):
     id: int
     user_id: int
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 # Habit Schemas
@@ -49,7 +49,7 @@ class HabitResponse(HabitBase):
     id: int
     streak: int
     user_id: int
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 # Goal Schemas
@@ -75,7 +75,7 @@ class GoalResponse(GoalBase):
     user_id: int
     milestones: List[MilestoneResponse] = []
     tasks: List[TaskResponse] = []
-    
+
     @computed_field
     @property
     def progress_percentage(self) -> float:
@@ -83,7 +83,7 @@ class GoalResponse(GoalBase):
             return 0.0
         completed = sum(1 for m in self.milestones if m.is_completed)
         return round((completed / len(self.milestones)) * 100, 2)
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 # Dashboard Schema

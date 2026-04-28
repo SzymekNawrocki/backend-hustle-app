@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any
 from fastapi import HTTPException
 from groq import AsyncGroq, RateLimitError, APIConnectionError
 from app.core.config import settings

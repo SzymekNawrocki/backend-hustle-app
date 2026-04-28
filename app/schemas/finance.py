@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 from pydantic import BaseModel, ConfigDict, field_validator, Field
 from app.models.finance import ExpenseCategory
 
@@ -25,7 +25,7 @@ class ExpenseCreate(ExpenseBase):
 class ExpenseResponse(ExpenseBase):
     id: int
     user_id: int
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 class ExpenseUpdate(BaseModel):
