@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.cache import cache, dashboard_key, activity_key, invalidate_dashboard
+from app.core.exceptions import AIServiceError
 from app.db.pagination import paginate
 from app.models.goal import Goal, Milestone, Task, Habit, GoalStatus
 from app.models.finance import Expense, ExpenseCategory
@@ -110,13 +111,10 @@ class GoalService:
         return goal
 
     async def smart_create(self, db: AsyncSession, user_id: int, idea: str) -> Any:
-        ai_data = await ai_service.generate_okr(idea)
-        if "error" in ai_data:
-            from fastapi import status as http_status
-            raise HTTPException(
-                status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=ai_data.get("details", "AI Error"),
-            )
+        try:
+            ai_data = await ai_service.generate_okr(idea)
+        except AIServiceError as e:
+            raise HTTPException(status_code=e.status_code, detail=e.detail)
         ai_data.setdefault("title", idea[:50])
         ai_data.setdefault("description", f"Plan for: {idea}")
         if not isinstance(ai_data.get("milestones"), list):

@@ -36,24 +36,22 @@ def _log(record: dict) -> None:
     print(json.dumps(record, default=str), flush=True, file=sys.stdout)
 
 
-def _extract_user_id(request: Request) -> int | None:
-    """Decode JWT from Authorization header or cookie; return user_id or None."""
-    token: str | None = None
+def _extract_token(request: Request) -> str | None:
+    """Extract raw JWT from Authorization header or cookie."""
     auth = request.headers.get("Authorization")
     if auth and auth.startswith("Bearer "):
-        token = auth[7:]
-    if not token:
-        token = request.cookies.get(settings.AUTH_COOKIE_NAME)
-    if token:
-        try:
-            payload = jwt.decode(
-                token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
-            )
-            sub = payload.get("sub")
-            return int(sub) if sub is not None else None
-        except (JWTError, ValueError):
-            pass
-    return None
+        return auth[7:]
+    return request.cookies.get(settings.AUTH_COOKIE_NAME) or None
+
+
+def _decode_user_id(token: str) -> int | None:
+    """Decode JWT and return user_id, or None on any error."""
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        sub = payload.get("sub")
+        return int(sub) if sub is not None else None
+    except (JWTError, ValueError):
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +75,9 @@ app.state.limiter = limiter
 async def request_logging_middleware(request: Request, call_next):
     request_id = str(uuid.uuid4())
     request.state.request_id = request_id
-    request.state.user_id = _extract_user_id(request)
+    token = _extract_token(request)
+    request.state.token = token
+    request.state.user_id = _decode_user_id(token) if token else None
 
     start = time.perf_counter()
     response = await call_next(request)

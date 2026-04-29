@@ -1,8 +1,8 @@
 import json
 from typing import Dict, Any
-from fastapi import HTTPException
 from groq import AsyncGroq, RateLimitError, APIConnectionError
 from app.core.config import settings
+from app.core.exceptions import AIServiceError
 
 class AIService:
     def __init__(self):
@@ -24,19 +24,13 @@ class AIService:
             try:
                 return json.loads(raw)
             except json.JSONDecodeError:
-                print(f"AI JSON parse error. Raw response (truncated): {raw[:500]!r}")
-                raise HTTPException(
-                    status_code=502,
-                    detail="AI returned invalid response, try again",
-                )
-        except HTTPException:
+                raise AIServiceError("AI returned invalid response, try again", status_code=502)
+        except AIServiceError:
             raise
         except (RateLimitError, APIConnectionError) as e:
-            print(f"AI Service Error: {e}")
-            return {"error": "AI service temporarily unavailable", "details": str(e)}
+            raise AIServiceError(f"AI service temporarily unavailable: {e}", status_code=503)
         except Exception as e:
-            print(f"Unexpected AI Error: {e}")
-            return {"error": "Critical analysis failure", "details": str(e)}
+            raise AIServiceError(f"AI analysis failure: {e}", status_code=503)
 
 
     async def parse_meal(self, text: str) -> Dict[str, Any]:

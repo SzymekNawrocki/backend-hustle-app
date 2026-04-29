@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select
 
 from app.api import deps
+from app.core.exceptions import AIServiceError
 from app.core.limiter import limiter
 from app.core.cache import invalidate_dashboard
 from app.db.pagination import paginate
@@ -27,17 +28,11 @@ async def log_meal_ai(
     """
     Log a meal using natural language via AI analysis.
     """
-    ai_data = await ai_service.parse_meal(input_data.text)
-
-    if "error" in ai_data:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=ai_data.get("details", "AI Analysis failed")
-        )
-
-    # Validate with Pydantic
     try:
+        ai_data = await ai_service.parse_meal(input_data.text)
         nutrition = MealAIResponse(**ai_data)
+    except AIServiceError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Invalid AI output: {e}")
 

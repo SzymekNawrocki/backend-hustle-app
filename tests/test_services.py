@@ -9,6 +9,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import HTTPException
 
+from app.core.exceptions import AIServiceError
 from app.services.goal_service import GoalService
 from app.services.auth_service import AuthService
 from app.models.goal import Goal, Task, Milestone
@@ -149,7 +150,7 @@ async def test_smart_create_raises_503_on_ai_error():
     db = _mock_db()
 
     with patch("app.services.goal_service.ai_service") as mock_ai:
-        mock_ai.generate_okr = AsyncMock(return_value={"error": "unavailable"})
+        mock_ai.generate_okr = AsyncMock(side_effect=AIServiceError("unavailable", 503))
         with pytest.raises(HTTPException) as exc_info:
             await svc.smart_create(db, user_id=1, idea="build a startup")
 
