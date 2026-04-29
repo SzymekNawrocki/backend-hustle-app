@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base
+from app.db.mixins import SoftDeleteMixin
 from app.db.types import NaiveDateTime
 
 if TYPE_CHECKING:
@@ -20,7 +21,7 @@ class OfferStatus(str, enum.Enum):
     Umowa = "umowa"
 
 
-class JobOffer(Base):
+class JobOffer(SoftDeleteMixin, Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     title: Mapped[str] = mapped_column(String, nullable=False, index=True)
     company: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
@@ -35,8 +36,6 @@ class JobOffer(Base):
     )
     url: Mapped[str] = mapped_column(String, nullable=False)
     notes: Mapped[str | None] = mapped_column(String, nullable=True)
-
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(NaiveDateTime, nullable=True)
 
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
     user: Mapped["User"] = relationship("User", back_populates="job_offers")

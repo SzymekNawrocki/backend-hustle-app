@@ -1,6 +1,5 @@
 import asyncio
 from datetime import datetime, date, timedelta, timezone
-from math import ceil
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api import deps
 from app.core.limiter import limiter
+from app.db.pagination import paginate
 from app.schemas.pagination import PaginatedResponse
 from app.models.user import User
 from app.models.goal import Goal, Milestone, Task, Habit, GoalStatus
@@ -73,37 +73,16 @@ async def read_goals(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
 ) -> Any:
-    """
-    Retrieve goals for current user (paginated).
-    """
-    offset = (page - 1) * limit
-
-    count_result = await db.execute(
-        select(func.count(Goal.id)).where(
-            Goal.user_id == current_user.id,
-            Goal.deleted_at.is_(None),
-        )
+    base_filter = (Goal.user_id == current_user.id, Goal.deleted_at.is_(None))
+    return await paginate(
+        db,
+        query=select(Goal).where(*base_filter).options(
+            selectinload(Goal.milestones), selectinload(Goal.tasks)
+        ),
+        count_query=select(func.count(Goal.id)).where(*base_filter),
+        page=page,
+        limit=limit,
     )
-    total = count_result.scalar() or 0
-
-    result = await db.execute(
-        select(Goal)
-        .where(Goal.user_id == current_user.id, Goal.deleted_at.is_(None))
-        .offset(offset)
-        .limit(limit)
-        .options(
-            selectinload(Goal.milestones),
-            selectinload(Goal.tasks)
-        )
-    )
-    goals = result.scalars().all()
-
-    return {
-        "items": goals,
-        "total": total,
-        "page": page,
-        "pages": ceil(total / limit) if total > 0 else 1,
-    }
 
 
 @router.get("/dashboard/today", response_model=DashboardToday)
@@ -391,10 +370,9 @@ async def delete_goal(
     if not goal_to_return:
         raise HTTPException(status_code=404, detail="Goal not found")
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
-    goal_to_return.deleted_at = now
+    goal_to_return.soft_delete()
     for task in goal_to_return.tasks:
-        task.deleted_at = now
+        task.soft_delete()
     await db.commit()
     await invalidate_dashboard(current_user.id)
     return goal_to_return

@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-from math import ceil
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +6,7 @@ from sqlalchemy import func, select
 from app.api import deps
 from app.core.limiter import limiter
 from app.core.cache import invalidate_dashboard
+from app.db.pagination import paginate
 from app.schemas.pagination import PaginatedResponse
 from app.models.user import User
 from app.models.finance import Expense
@@ -25,33 +24,14 @@ async def read_expenses(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
 ) -> Any:
-    """
-    Retrieve expenses for current user (paginated).
-    """
-    offset = (page - 1) * limit
-
-    count_result = await db.execute(
-        select(func.count(Expense.id)).where(
-            Expense.user_id == current_user.id,
-            Expense.deleted_at.is_(None),
-        )
+    base_filter = (Expense.user_id == current_user.id, Expense.deleted_at.is_(None))
+    return await paginate(
+        db,
+        query=select(Expense).where(*base_filter).order_by(Expense.timestamp.desc()),
+        count_query=select(func.count(Expense.id)).where(*base_filter),
+        page=page,
+        limit=limit,
     )
-    total = count_result.scalar() or 0
-
-    result = await db.execute(
-        select(Expense)
-        .where(Expense.user_id == current_user.id, Expense.deleted_at.is_(None))
-        .order_by(Expense.timestamp.desc())
-        .offset(offset)
-        .limit(limit)
-    )
-
-    return {
-        "items": result.scalars().all(),
-        "total": total,
-        "page": page,
-        "pages": ceil(total / limit) if total > 0 else 1,
-    }
 
 @router.patch("/expenses/{expense_id}", response_model=ExpenseResponse)
 async def update_expense(
@@ -102,7 +82,7 @@ async def delete_expense(
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
 
-    expense.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    expense.soft_delete()
     await db.commit()
     await invalidate_dashboard(current_user.id)
     return expense

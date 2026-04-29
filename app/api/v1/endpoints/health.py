@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-from math import ceil
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +6,7 @@ from sqlalchemy import func, select
 from app.api import deps
 from app.core.limiter import limiter
 from app.core.cache import invalidate_dashboard
+from app.db.pagination import paginate
 from app.models.user import User
 from app.models.health import MealLog
 from app.schemas.health import MealLogResponse, MealLogAIRequest
@@ -75,7 +74,7 @@ async def delete_meal(
     if not meal:
         raise HTTPException(status_code=404, detail="Meal not found")
 
-    meal.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    meal.soft_delete()
     await db.commit()
     await invalidate_dashboard(current_user.id)
     return meal
@@ -87,27 +86,11 @@ async def read_meals(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
 ) -> Any:
-    offset = (page - 1) * limit
-
-    count_result = await db.execute(
-        select(func.count(MealLog.id)).where(
-            MealLog.user_id == current_user.id,
-            MealLog.deleted_at.is_(None),
-        )
+    base_filter = (MealLog.user_id == current_user.id, MealLog.deleted_at.is_(None))
+    return await paginate(
+        db,
+        query=select(MealLog).where(*base_filter).order_by(MealLog.id.desc()),
+        count_query=select(func.count(MealLog.id)).where(*base_filter),
+        page=page,
+        limit=limit,
     )
-    total = count_result.scalar() or 0
-
-    result = await db.execute(
-        select(MealLog)
-        .where(MealLog.user_id == current_user.id, MealLog.deleted_at.is_(None))
-        .order_by(MealLog.id.desc())
-        .offset(offset)
-        .limit(limit)
-    )
-
-    return {
-        "items": result.scalars().all(),
-        "total": total,
-        "page": page,
-        "pages": ceil(total / limit) if total > 0 else 1,
-    }
