@@ -2,13 +2,12 @@ import asyncio
 from datetime import datetime, date, timedelta
 from typing import Any
 
-from fastapi import HTTPException
 from sqlalchemy import func, desc, case, cast, select, Date as SQLDate
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.cache import cache, dashboard_key, activity_key, invalidate_dashboard
-from app.core.exceptions import AIServiceError
+from app.core.exceptions import AIServiceError, NotFoundError
 from app.db.pagination import paginate
 from app.models.goal import Goal, Milestone, Task, Habit, GoalStatus
 from app.models.finance import Expense, ExpenseCategory
@@ -69,7 +68,7 @@ class GoalService:
         )
         goal = result.scalars().first()
         if not goal:
-            raise HTTPException(status_code=404, detail="Goal not found")
+            raise NotFoundError("Goal not found")
         return goal
 
     async def update(self, db: AsyncSession, user_id: int, goal_id: int, goal_in: GoalUpdate) -> Any:
@@ -80,7 +79,7 @@ class GoalService:
         )
         goal = result.scalars().first()
         if not goal:
-            raise HTTPException(status_code=404, detail="Goal not found")
+            raise NotFoundError("Goal not found")
         for field, value in goal_in.model_dump(exclude_unset=True).items():
             setattr(goal, field, value)
         db.add(goal)
@@ -102,7 +101,7 @@ class GoalService:
         )
         goal = result.scalars().first()
         if not goal:
-            raise HTTPException(status_code=404, detail="Goal not found")
+            raise NotFoundError("Goal not found")
         goal.soft_delete()
         for task in goal.tasks:
             task.soft_delete()
@@ -111,10 +110,7 @@ class GoalService:
         return goal
 
     async def smart_create(self, db: AsyncSession, user_id: int, idea: str) -> Any:
-        try:
-            ai_data = await ai_service.generate_okr(idea)
-        except AIServiceError as e:
-            raise HTTPException(status_code=e.status_code, detail=e.detail)
+        ai_data = await ai_service.generate_okr(idea)
         ai_data.setdefault("title", idea[:50])
         ai_data.setdefault("description", f"Plan for: {idea}")
         if not isinstance(ai_data.get("milestones"), list):
@@ -154,7 +150,7 @@ class GoalService:
         )
         task = result.scalars().first()
         if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
+            raise NotFoundError("Task not found")
         task.is_completed = not task.is_completed
         db.add(task)
         await db.commit()
@@ -169,7 +165,7 @@ class GoalService:
         )
         milestone = result.scalars().first()
         if not milestone:
-            raise HTTPException(status_code=404, detail="Milestone not found")
+            raise NotFoundError("Milestone not found")
         milestone.is_completed = not milestone.is_completed
         db.add(milestone)
         await db.commit()

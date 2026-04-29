@@ -1,22 +1,16 @@
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func, select
 
 from app.api import deps
-from app.core.exceptions import AIServiceError
 from app.core.limiter import limiter
-from app.core.cache import invalidate_dashboard
-from app.db.pagination import paginate
-from app.schemas.pagination import PaginatedResponse
 from app.models.user import User
-from app.models.finance import Expense
-from app.schemas.finance import (
-    ExpenseResponse, ExpenseUpdate, HustleInputRequest
-)
-from app.services.ai_service import ai_service
+from app.schemas.finance import ExpenseResponse, ExpenseUpdate, HustleInputRequest
+from app.schemas.pagination import PaginatedResponse
+from app.services.finance_service import finance_service
 
 router = APIRouter()
+
 
 @router.get("/expenses", response_model=PaginatedResponse[ExpenseResponse])
 async def read_expenses(
@@ -25,14 +19,8 @@ async def read_expenses(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
 ) -> Any:
-    base_filter = (Expense.user_id == current_user.id, Expense.deleted_at.is_(None))
-    return await paginate(
-        db,
-        query=select(Expense).where(*base_filter).order_by(Expense.timestamp.desc()),
-        count_query=select(func.count(Expense.id)).where(*base_filter),
-        page=page,
-        limit=limit,
-    )
+    return await finance_service.list(db, current_user.id, page, limit)
+
 
 @router.patch("/expenses/{expense_id}", response_model=ExpenseResponse)
 async def update_expense(
@@ -42,24 +30,7 @@ async def update_expense(
     expense_id: int,
     expense_in: ExpenseUpdate,
 ) -> Any:
-    result = await db.execute(
-        select(Expense).where(
-            Expense.id == expense_id,
-            Expense.user_id == current_user.id,
-            Expense.deleted_at.is_(None),
-        )
-    )
-    expense = result.scalars().first()
-    if not expense:
-        raise HTTPException(status_code=404, detail="Expense not found")
-
-    for field, value in expense_in.model_dump(exclude_unset=True).items():
-        setattr(expense, field, value)
-
-    await db.commit()
-    await db.refresh(expense)
-    await invalidate_dashboard(current_user.id)
-    return expense
+    return await finance_service.update(db, current_user.id, expense_id, expense_in)
 
 
 @router.delete("/expenses/{expense_id}", response_model=ExpenseResponse)
@@ -67,26 +38,10 @@ async def delete_expense(
     *,
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
-    expense_id: int
+    expense_id: int,
 ) -> Any:
-    """
-    Delete an expense.
-    """
-    result = await db.execute(
-        select(Expense).where(
-            Expense.id == expense_id,
-            Expense.user_id == current_user.id,
-            Expense.deleted_at.is_(None),
-        )
-    )
-    expense = result.scalars().first()
-    if not expense:
-        raise HTTPException(status_code=404, detail="Expense not found")
+    return await finance_service.delete(db, current_user.id, expense_id)
 
-    expense.soft_delete()
-    await db.commit()
-    await invalidate_dashboard(current_user.id)
-    return expense
 
 @router.post("/hustle-input", response_model=ExpenseResponse)
 @limiter.limit("10/minute")
@@ -96,32 +51,4 @@ async def create_hustle_expense(
     current_user: User = Depends(deps.get_current_user),
     hustle_in: HustleInputRequest = ...,
 ) -> Any:
-    """
-    AI-powered hustle input for quick expense tracking.
-    """
-    try:
-        parsed_data = await ai_service.parse_hustle_input(hustle_in.text)
-    except AIServiceError as e:
-        raise HTTPException(status_code=e.status_code, detail=e.detail)
-
-    amount = parsed_data.get("amount")
-    category = hustle_in.forced_category or parsed_data.get("category")
-    description = parsed_data.get("description")
-
-    if amount is None:
-        raise HTTPException(status_code=400, detail="Couldn't find the amount in your text. Example: '50 PLN for pizza'")
-    if category is None or description is None:
-        raise HTTPException(status_code=400, detail="AI couldn't categorize the expense reliably.")
-
-    # Save to database
-    db_obj = Expense(
-        amount=float(amount),
-        category=category.upper(), # Ensure uppercase to match enum
-        description=description,
-        user_id=current_user.id
-    )
-    db.add(db_obj)
-    await db.commit()
-    await db.refresh(db_obj)
-    await invalidate_dashboard(current_user.id)
-    return db_obj
+    return await finance_service.create_from_text(db, current_user.id, hustle_in)
