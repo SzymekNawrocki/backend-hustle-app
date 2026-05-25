@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 from app.db.types import NaiveDateTime
 
 class ExpenseCategory(str, enum.Enum):
-    OPLATY = "OPLATY"
+    EXPENSES = "EXPENSES"
     HUSTLE = "HUSTLE"
     LIFESTYLE = "LIFESTYLE"
     INCOME = "INCOME"

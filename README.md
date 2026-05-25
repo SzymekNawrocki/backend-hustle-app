@@ -199,7 +199,7 @@ Goals expose a computed `progress_percentage` field (% of milestones completed).
 { "amount": 50.0, "category": "HUSTLE", "description": "Python course" }
 ```
 
-Categories: `OPLATY` (bills/food) · `HUSTLE` (courses/gear) · `LIFESTYLE` · `INCOME`
+Categories: `EXPENSES` (bills/food) · `HUSTLE` (courses/gear) · `LIFESTYLE` · `INCOME`
 
 ### Health — `/health`
 
@@ -298,7 +298,7 @@ Habit:     id, title, frequency (DAILY|WEEKLY), streak, user_id
 
 ### Expense
 ```
-id, amount, category (OPLATY|HUSTLE|LIFESTYLE|INCOME),
+id, amount, category (EXPENSES|HUSTLE|LIFESTYLE|INCOME),
 description, timestamp (indexed), deleted_at, user_id
 ```
 

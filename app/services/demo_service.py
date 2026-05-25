@@ -60,7 +60,7 @@ async def reset_demo_data(db: AsyncSession, user_id: int):
     # Finance
     expenses = [
         Expense(amount=45.50, category=ExpenseCategory.LIFESTYLE, description="Coffee & lunch", user_id=user_id),
-        Expense(amount=1200.00, category=ExpenseCategory.OPLATY, description="Rent", user_id=user_id),
+        Expense(amount=1200.00, category=ExpenseCategory.EXPENSES, description="Rent", user_id=user_id),
         Expense(amount=250.00, category=ExpenseCategory.HUSTLE, description="Online course - Next.js", user_id=user_id),
     ]
     db.add_all(expenses)

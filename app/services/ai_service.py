@@ -57,8 +57,8 @@ class AIService:
     async def parse_hustle_input(self, text: str) -> Dict[str, Any]:
         system_prompt = (
             "You are a financial analyst for Hustle App. Your job is to extract structured data from text and categorize it. "
-            "Return JSON: {amount: float, category: 'OPLATY'|'HUSTLE'|'LIFESTYLE'|'INCOME', description: string}. "
-            "Rules: if the expense is a course/book/gear -> HUSTLE. If it's food or rent/bills -> OPLATY. If it's income/salary/transfer/bonus -> INCOME. Otherwise -> LIFESTYLE."
+            "Return JSON: {amount: float, category: 'EXPENSES'|'HUSTLE'|'LIFESTYLE'|'INCOME', description: string}. "
+            "Rules: if the expense is a course/book/gear -> HUSTLE. If it's food or rent/bills -> EXPENSES. If it's income/salary/transfer/bonus -> INCOME. Otherwise -> LIFESTYLE."
         )
         return await self._get_json_response(text, system_prompt, temperature=0)
 
