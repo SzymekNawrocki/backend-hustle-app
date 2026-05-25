@@ -8,7 +8,8 @@ from alembic import context
 
 sys.path.insert(0, dirname(dirname(abspath(__file__))))
 
-from app.db.base import Base  
+from app.db.base_class import Base  # noqa: F401 — imports all models via base_class
+import app.models  # noqa: F401 — ensure all models are registered on Base.metadata
 from app.core.config import settings
 
 config = context.config
