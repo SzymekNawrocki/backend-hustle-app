@@ -28,7 +28,7 @@ Personal productivity and finance tracking platform with AI-powered parsing, JWT
 |---|---|
 | Framework | FastAPI (async) |
 | ORM | SQLAlchemy 2.0 + asyncpg |
-| Database | PostgreSQL (Supabase / Neon) |
+| Database | PostgreSQL (Neon) |
 | Migrations | Alembic |
 | AI | Groq API — `llama-3.3-70b-versatile` |
 | Auth | JWT (HS256) + httpOnly cookies + refresh tokens |
@@ -78,8 +78,12 @@ backend/app/
 │   ├── ai.py                   # Groq response shapes
 │   └── pagination.py           # Generic PaginatedResponse[T]
 └── services/
+    ├── auth_service.py         # Register, login, refresh, logout, demo account
+    ├── goal_service.py         # Goals, milestones, tasks, habits, dashboard, activity
+    ├── finance_service.py      # Expenses CRUD, AI hustle-input parsing
+    ├── health_service.py       # Meal log CRUD, AI meal parsing
     ├── ai_service.py           # Groq integration (meals, expenses, goals)
-    └── demo_service.py         # Demo account data reset
+    └── demo_service.py         # Demo account data seeding/reset
 ```
 
 **Design principles:**
@@ -238,7 +242,7 @@ Categories: `OPLATY` (bills/food) · `HUSTLE` (courses/gear) · `LIFESTYLE` · `
 
 **Token storage:** httpOnly, Secure, SameSite=none cookies (cross-origin: Vercel → Render).
 
-**Access token:** 15-minute lifetime, HS256.
+**Access token:** 60-minute lifetime, HS256.
 
 **Refresh token:**
 - 64-char hex string generated with `secrets.token_hex(32)`.
@@ -458,6 +462,10 @@ backend/
 │   │   ├── ai.py
 │   │   └── pagination.py
 │   └── services/
+│       ├── auth_service.py
+│       ├── goal_service.py
+│       ├── finance_service.py
+│       ├── health_service.py
 │       ├── ai_service.py
 │       └── demo_service.py
 ├── alembic/                    # Migration scripts
