@@ -15,3 +15,10 @@ class AIServiceError(DomainError):
 
     def __init__(self, detail: str, status_code: int = 503) -> None:
         super().__init__(detail=detail, status_code=status_code)
+
+
+class EmailServiceError(DomainError):
+    """Raised by EmailService when the Resend call fails."""
+
+    def __init__(self, detail: str = "Email could not be delivered", status_code: int = 503) -> None:
+        super().__init__(detail=detail, status_code=status_code)

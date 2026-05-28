@@ -9,9 +9,19 @@ from app.api import deps
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse, Token
+from app.schemas.user import (
+    UserCreate,
+    UserResponse,
+    Token,
+    UpdateProfileRequest,
+    ChangePasswordRequest,
+    DeleteAccountRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+)
 from app.services.auth_service import auth_service
 from app.services.demo_service import reset_demo_data_bg
+from app.services.email_service import email_service
 
 
 router = APIRouter()
@@ -85,6 +95,72 @@ async def refresh(
 @router.get("/me", response_model=UserResponse)
 async def read_current_user(current_user: User = Depends(deps.get_current_user)) -> Any:
     return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+@limiter.limit("20/minute")
+async def update_profile(
+    request: Request,
+    body: UpdateProfileRequest,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+) -> Any:
+    return await auth_service.update_profile(db, current_user, body.full_name)
+
+
+@router.post("/change-password", status_code=204)
+@limiter.limit("5/minute")
+async def change_password(
+    request: Request,
+    body: ChangePasswordRequest,
+    response: Response,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+) -> None:
+    await auth_service.change_password(db, current_user, body.current_password, body.new_password)
+    # Clear auth cookies — user must log in again
+    response.delete_cookie(key=settings.AUTH_COOKIE_NAME, path="/")
+    response.delete_cookie(key=settings.REFRESH_COOKIE_NAME, path=f"{settings.API_V1_STR}/auth/refresh")
+
+
+@router.post("/forgot-password", status_code=200)
+@limiter.limit("3/hour", key_func=get_remote_address)
+async def forgot_password(
+    request: Request,
+    body: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(deps.get_db),
+) -> dict:
+    raw_token = await auth_service.forgot_password(db, body.email)
+    if raw_token:
+        background_tasks.add_task(email_service.send_password_reset, body.email, raw_token)
+    # Always return 200 — no user enumeration
+    return {"message": "If that email is registered, a reset link is on its way."}
+
+
+@router.post("/reset-password", status_code=200)
+@limiter.limit("10/hour", key_func=get_remote_address)
+async def reset_password(
+    request: Request,
+    body: ResetPasswordRequest,
+    db: AsyncSession = Depends(deps.get_db),
+) -> dict:
+    await auth_service.reset_password(db, body.token, body.new_password)
+    return {"message": "Password reset successful. You can now log in with your new password."}
+
+
+@router.delete("/me", status_code=204)
+@limiter.limit("3/hour")
+async def delete_account(
+    request: Request,
+    body: DeleteAccountRequest,
+    response: Response,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+) -> None:
+    await auth_service.delete_account(db, current_user, body.password)
+    response.delete_cookie(key=settings.AUTH_COOKIE_NAME, path="/")
+    response.delete_cookie(key=settings.REFRESH_COOKIE_NAME, path=f"{settings.API_V1_STR}/auth/refresh")
 
 
 @router.post("/demo-login", response_model=Token)

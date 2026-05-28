@@ -35,10 +35,17 @@ class Settings(BaseSettings):
     REFRESH_COOKIE_NAME: str = "refresh_token"
     GROQ_API_KEY: str
 
-    # True for Supabase/production (requires SSL). False for local postgres.
+    # True for Neon/production (requires SSL). False for local postgres.
     DB_SSL: bool = True
 
     SENTRY_DSN: Optional[str] = None
+
+    # Email (Resend)
+    RESEND_API_KEY: Optional[str] = None
+    EMAIL_FROM: str = "Hustle App <noreply@hustle-app.dev>"
+
+    # Frontend base URL (used in email links)
+    FRONTEND_URL: str = "https://hustle-app-theta.vercel.app"
 
     AUTH_COOKIE_NAME: str = "token"
     # MUST be True for cross-site production (Vercel -> Render)

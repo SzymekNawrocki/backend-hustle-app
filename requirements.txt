@@ -11,6 +11,7 @@ python-dotenv==1.2.1
 pydantic-settings==2.12.0
 pydantic[email]==2.12.5
 groq==0.37.1
+resend==2.7.0
 httpx==0.28.1
 slowapi==0.1.9
 sentry-sdk[fastapi]==2.26.1
