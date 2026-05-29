@@ -382,6 +382,27 @@ alembic downgrade -1
 
 ---
 
+## Stripe Webhooks (local dev)
+
+To test the donation flow locally you need the [Stripe CLI](https://stripe.com/docs/stripe-cli):
+
+```bash
+# Terminal 1 — run the backend
+uvicorn app.main:app --reload
+
+# Terminal 2 — forward Stripe events to your local backend
+stripe listen --forward-to localhost:8000/api/v1/donations/webhook
+# The CLI prints a whsec_... signing secret — set it in backend/.env:
+# STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Trigger a test payment event to verify the webhook handler
+stripe trigger checkout.session.completed
+```
+
+After the trigger, check the DB: the `donation` row should have `status = COMPLETED`.
+
+---
+
 ## Tests & CI
 
 ### Running tests locally
