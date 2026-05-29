@@ -43,7 +43,17 @@ async def stripe_webhook(
 ) -> Any:
     payload = await request.body()
     sig = request.headers.get("stripe-signature", "")
-    await donation_service.handle_webhook(db, payload, sig)
+    completed = await donation_service.handle_webhook(db, payload, sig)
+    if completed:
+        supporter_email, amount_cents = completed
+        from app.workers.pool import get_arq_pool
+        from app.services.email_service import email_service
+        pool = await get_arq_pool()
+        if pool:
+            await pool.enqueue_job("send_donation_thanks", supporter_email, amount_cents)  # type: ignore[attr-defined]
+        else:
+            import asyncio
+            asyncio.ensure_future(email_service.send_donation_thanks(supporter_email, amount_cents))
     return {"status": "ok"}
 
 

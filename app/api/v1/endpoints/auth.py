@@ -133,7 +133,12 @@ async def forgot_password(
 ) -> dict:
     raw_token = await auth_service.forgot_password(db, body.email)
     if raw_token:
-        background_tasks.add_task(email_service.send_password_reset, body.email, raw_token)
+        from app.workers.pool import get_arq_pool
+        pool = await get_arq_pool()
+        if pool:
+            await pool.enqueue_job("send_reset_email", body.email, raw_token)  # type: ignore[attr-defined]
+        else:
+            background_tasks.add_task(email_service.send_password_reset, body.email, raw_token)
     # Always return 200 — no user enumeration
     return {"message": "If that email is registered, a reset link is on its way."}
 

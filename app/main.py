@@ -2,7 +2,9 @@ import json
 import sys
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from typing import AsyncGenerator
 
 import sentry_sdk
 from fastapi import FastAPI, Request, HTTPException
@@ -18,6 +20,18 @@ from app.core.config import settings
 from app.core.exceptions import DomainError
 from app.core.limiter import limiter
 
+def _sentry_before_send(event: dict, hint: dict) -> dict:
+    """Strip cookies and auth headers from every Sentry event to avoid PII leaks."""
+    req = event.get("request", {})
+    req.pop("cookies", None)
+    headers = req.get("headers", {})
+    headers.pop("Authorization", None)
+    headers.pop("authorization", None)
+    headers.pop("Cookie", None)
+    headers.pop("cookie", None)
+    return event
+
+
 if settings.SENTRY_DSN:
     sentry_sdk.init(
         dsn=settings.SENTRY_DSN,
@@ -25,6 +39,7 @@ if settings.SENTRY_DSN:
         traces_sample_rate=0.2,
         send_default_pii=False,
         environment="production",
+        before_send=_sentry_before_send,
     )
 
 
@@ -59,10 +74,19 @@ def _decode_user_id(token: str) -> int | None:
 # App
 # ---------------------------------------------------------------------------
 
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    from app.workers.pool import get_arq_pool, close_arq_pool
+    await get_arq_pool()  # pre-warm if REDIS_URL is set
+    yield
+    await close_arq_pool()
+
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan,
 )
 
 app.state.limiter = limiter

@@ -64,7 +64,9 @@ class DonationService:
         db: AsyncSession,
         payload: bytes,
         sig_header: str,
-    ) -> None:
+    ) -> Optional[tuple[str, int]]:
+        """Process Stripe webhook. Returns (supporter_email, amount_cents) if a
+        donation completed with a known email, otherwise None."""
         if not settings.STRIPE_WEBHOOK_SECRET:
             raise DomainError("Webhook secret not configured", 500)
 
@@ -92,6 +94,9 @@ class DonationService:
                 if supporter_email:
                     donation.supporter_email = supporter_email
                 await db.commit()
+                if supporter_email:
+                    return supporter_email, donation.amount_cents
+        return None
 
     async def get_recent(self, db: AsyncSession, limit: int = 10) -> list[Donation]:
         result = await db.execute(

@@ -1,13 +1,9 @@
 """
-Prosty in-memory cache z TTL (Time To Live).
+Cache abstraction with two backends:
+  - Redis (when REDIS_URL is set): survives restarts, works across multiple instances
+  - In-memory TTLCache (fallback): no dependencies, fine for a single-instance deploy
 
-Używamy asyncio.Lock zamiast threading.Lock — wszystkie requesty FastAPI
-działają w tym samym event loop, więc asyncio jest właściwe.
-
-Ograniczenia:
-- Pamięć: cache znika przy restarcie serwisu
-- Skalowalność: nie działa między wieloma instancjami (Render free = 1 instancja)
-- Alternatywa gdy będziesz skalować: zamień na Redis + fastapi-cache2
+Switch by setting REDIS_URL in your environment — no code changes needed.
 """
 
 import asyncio
@@ -15,7 +11,11 @@ from datetime import datetime, timedelta
 from typing import Any, Optional
 
 
-class TTLCache:
+# ---------------------------------------------------------------------------
+# In-memory fallback
+# ---------------------------------------------------------------------------
+
+class _InMemoryCache:
     def __init__(self) -> None:
         self._store: dict[str, tuple[Any, datetime]] = {}
         self._lock = asyncio.Lock()
@@ -40,12 +40,59 @@ class TTLCache:
             self._store.pop(key, None)
 
 
-# Globalny singleton — jeden na cały proces
-cache = TTLCache()
+# ---------------------------------------------------------------------------
+# Redis-backed cache
+# ---------------------------------------------------------------------------
+
+class _RedisCache:
+    def __init__(self, redis_url: str) -> None:
+        import redis.asyncio as aioredis
+        import json as _json
+
+        self._client = aioredis.from_url(redis_url, decode_responses=True)
+        self._json = _json
+
+    async def get(self, key: str) -> Optional[Any]:
+        import redis.asyncio as aioredis
+        try:
+            raw = await self._client.get(key)
+            if raw is None:
+                return None
+            return self._json.loads(raw)
+        except (aioredis.RedisError, Exception):
+            return None
+
+    async def set(self, key: str, value: Any, ttl: int = 30) -> None:
+        import redis.asyncio as aioredis
+        try:
+            await self._client.set(key, self._json.dumps(value, default=str), ex=ttl)
+        except (aioredis.RedisError, Exception):
+            pass
+
+    async def delete(self, key: str) -> None:
+        import redis.asyncio as aioredis
+        try:
+            await self._client.delete(key)
+        except (aioredis.RedisError, Exception):
+            pass
 
 
 # ---------------------------------------------------------------------------
-# Helpers — klucze cache i invalidation
+# Factory — pick backend at startup
+# ---------------------------------------------------------------------------
+
+def _build_cache() -> Any:
+    from app.core.config import settings
+    if settings.REDIS_URL:
+        return _RedisCache(settings.REDIS_URL)
+    return _InMemoryCache()
+
+
+cache: Any = _build_cache()
+
+
+# ---------------------------------------------------------------------------
+# Key helpers + invalidation
 # ---------------------------------------------------------------------------
 
 def dashboard_key(user_id: int) -> str:
@@ -57,5 +104,4 @@ def activity_key(user_id: int) -> str:
 
 
 async def invalidate_dashboard(user_id: int) -> None:
-    """Wywołaj po każdym write który wpływa na dashboard użytkownika."""
     await cache.delete(dashboard_key(user_id))

@@ -21,6 +21,27 @@ def _send_sync(params: dict) -> None:
 
 
 class EmailService:
+    async def send_donation_thanks(self, to_email: str, amount_cents: int) -> None:
+        if not settings.RESEND_API_KEY:
+            print(f"[DEV] Donation thanks for {to_email}: ${amount_cents / 100:.2f}", flush=True)
+            return
+
+        amount_dollars = f"${amount_cents / 100:.2f}"
+        params = {
+            "from": settings.EMAIL_FROM,
+            "to": [to_email],
+            "subject": "Thank you for supporting Hustle App!",
+            "html": (
+                f"<p>Thank you so much for your {amount_dollars} donation!</p>"
+                f"<p>Your support helps keep Hustle App running. We really appreciate it.</p>"
+                f"<p>— The Hustle App team</p>"
+            ),
+        }
+        try:
+            await asyncio.to_thread(_send_sync, params)
+        except Exception as exc:
+            raise EmailServiceError(f"Failed to send donation thanks email: {exc}") from exc
+
     async def send_password_reset(self, to_email: str, reset_token: str) -> None:
         if not settings.RESEND_API_KEY:
             # Dev mode: log the reset URL to stdout instead of sending

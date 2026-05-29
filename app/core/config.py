@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
 
+    # Redis (optional — Phase 3: persistent cache + rate limiting + Arq jobs)
+    REDIS_URL: Optional[str] = None
+
     AUTH_COOKIE_NAME: str = "token"
     # MUST be True for cross-site production (Vercel -> Render)
     AUTH_COOKIE_SECURE: bool = True

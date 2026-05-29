@@ -2,6 +2,8 @@ from fastapi import Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from app.core.config import settings
+
 
 def get_user_id_key(request: Request) -> str:
     """
@@ -14,4 +16,8 @@ def get_user_id_key(request: Request) -> str:
     return get_remote_address(request)
 
 
-limiter = Limiter(key_func=get_user_id_key)
+# Use Redis storage when available so rate-limit counters survive restarts
+# and work correctly across multiple instances. Falls back to in-memory.
+_storage_uri = settings.REDIS_URL or "memory://"
+
+limiter = Limiter(key_func=get_user_id_key, storage_uri=_storage_uri)
