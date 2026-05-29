@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     # Frontend base URL (used in email links)
     FRONTEND_URL: str = "https://hustle-app-theta.vercel.app"
 
+    # Stripe (optional — Phase 2 donations)
+    STRIPE_SECRET_KEY: Optional[str] = None
+    STRIPE_WEBHOOK_SECRET: Optional[str] = None
+
     AUTH_COOKIE_NAME: str = "token"
     # MUST be True for cross-site production (Vercel -> Render)
     AUTH_COOKIE_SECURE: bool = True
